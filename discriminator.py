@@ -19,4 +19,4 @@ class Discriminator:
         return ret
 
     def loss(self, d_real, d_generated):
-        return -tf.reduce_mean(tf.log(self.act(d_real))+tf.log(1. - self.act(d_generated)))
+        return tf.reduce_mean(tf.log(self.act(d_real))+tf.log(1. - self.act(d_generated)))
