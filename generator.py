@@ -48,7 +48,7 @@ class Generator:
 
         return tf.reduce_mean(tf.log(1-discriminator.act(d_generated)))+self.a*prob_approx
 
-    def loss_grad(self, discriminator, z, layer_id):    # todo
+    def loss_grad(self,layer_id, discriminator, z):    # todo
         if self.layers[layer_id].type_ != 'linear':
             raise Exception('call of a gradient for a non-linear layer')
 
