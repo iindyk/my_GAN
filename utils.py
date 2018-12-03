@@ -68,12 +68,15 @@ class Layer:
     def layers_grad(layers, layer_id, x):
         trunc_act = Layer.layers_act(layers[:layer_id], x)
         n_layers = len(layers)
-        grad_w = layers[layer_id].gradient(trunc_act, var='w')
-        grad_b = layers[layer_id].gradient(trunc_act, var='b')
-        grad_x = layers[layer_id].gradient(trunc_act, var='x')
         mult = 1
         for curr_layer_id in range(layer_id + 1, n_layers):
             trunc_act = layers[curr_layer_id - 1].act(trunc_act)
             mult *= layers[curr_layer_id].gradient(trunc_act, var='x')
 
-        return {'w': mult * grad_w, 'b': mult * grad_b, 'x': mult*grad_x}
+        grad_x = layers[layer_id].gradient(trunc_act, var='x')
+        if layers[layer_id].type_ == 'linear':
+            grad_w = layers[layer_id].gradient(trunc_act, var='w')
+            grad_b = layers[layer_id].gradient(trunc_act, var='b')
+            return {'w': mult * grad_w, 'b': mult * grad_b, 'x': mult * grad_x}
+        else:
+            return {'x': mult * grad_x}

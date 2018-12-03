@@ -1,34 +1,47 @@
 import numpy as np
 from generator import *
 from discriminator import *
+from data import *
+import matplotlib.pyplot as plt
 
 
-nit = 1000
-data = []   # todo: get data
-nit_dis = 100
-sample_size = 100
+n = 200
+m = 2
+nit = 100
+nit_dis = 10
+sample_size = 10
 step = 1e-4
+gen_layers_profile = {}
+
+train_data, train_labels, test_data, test_labels = get_toy_data(n, m)   # get data
 
 # initialize
-generator = Generator([],[],[],[],[])   # todo: fill
+generator = Generator([],[],[],[],[])
 discriminator = Discriminator([])
 
 n_gen_layers = len(generator.layers)
 n_dis_layers = len(discriminator.layers)
 
+dis_losses = []
+gen_losses = []
+
+d_real = []
+d_generated = []
+
 for i in range(nit):
     for j in range(nit_dis):
         z = np.random.normal(size=sample_size)
-        d_real = data[np.random.randint(len(data), size=sample_size)]
+        d_real = train_data[np.random.randint(len(data), size=sample_size)]
+        d_generated = generator.act(z)
 
         # make gradient descent step for each linear layer parameters for discriminator
 
         for layer_id in range(n_dis_layers):
             if discriminator.layers[layer_id] == 'linear':
                 discriminator.layers[layer_id].params['w'] -= \
-                    step*discriminator.loss_grad(layer_id, d_real, generator.act(z))
+                    step*discriminator.loss_grad(layer_id, d_real, d_generated)
                 discriminator.layers[layer_id].params['b'] -= \
-                    step*discriminator.loss_grad(layer_id, d_real, generator.act(z))
+                    step*discriminator.loss_grad(layer_id, d_real, d_generated)
 
     # make gradient descent step for each linear layer parameters for generator
     z = np.random.normal(size=sample_size)
@@ -40,4 +53,12 @@ for i in range(nit):
             generator.layers[layer_id].params['b'] -= \
                 step*gen_grad['b']
 
-# todo: graphing
+    # append losses for graphing
+    dis_losses.append(discriminator.loss(d_real, d_generated))
+    gen_losses.append(generator.loss(discriminator, z))
+
+# graphing
+_, ax = plt.subplots()
+iterations = np.arange(nit)
+ax.plot(iterations, gen_losses, '-', label='generator loss')
+ax.plot(iterations, dis_losses, '-', label='discriminator loss')

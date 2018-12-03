@@ -18,8 +18,9 @@ class Generator:
         self.current_w = np.zeros(len(test_data[0]))
 
         # add layers
-        for layer_type in layers_profile:
-            self.layers.append(Layer(layer_type))
+        for layer_id in layers_profile:
+            self.layers.append(Layer(layers_profile[layer_id]['type'],
+                                     layers_profile[layer_id]['in'], layers_profile[layer_id]['out']))
 
     def add_train_data(self, new_train_data, new_train_labels):
         self.train_data = np.append(self.train_data, new_train_data, axis=0)
