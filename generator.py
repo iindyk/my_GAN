@@ -46,7 +46,9 @@ class Generator:
             prob_approx += max(self.test_labels[i]*(w.dot(self.test_data[i])+b), -1)
         prob_approx /= n_test'''
 
-        return tf.reduce_mean(tf.log(1-discriminator.act(d_generated)))  # +self.a*prob_approx
+        if discriminator.act(d_generated)[0] == 1.:
+            return 1000
+        return np.mean(np.log(1-discriminator.act(d_generated)))  # +self.a*prob_approx
 
     def loss_grad(self, layer_id, discriminator, z):    # todo
         if self.layers[layer_id].type_ != 'linear':
