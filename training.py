@@ -34,9 +34,10 @@ for i in range(nit):
     z = np.random.normal(size=sample_size)
     for layer_id in range(n_gen_layers):
         if generator.layers[layer_id] == 'linear':
+            gen_grad = generator.loss_grad(layer_id, discriminator, z)
             generator.layers[layer_id].params['w'] -= \
-                step*generator.loss_grad(layer_id, discriminator, z)
+                step*gen_grad['w']
             generator.layers[layer_id].params['b'] -= \
-                step*generator.loss_grad(layer_id, discriminator, z)
+                step*gen_grad['b']
 
 # todo: graphing

@@ -33,16 +33,27 @@ class Layer:
         elif self.type_ == 'sigmoid':
             return 1./(1.+np.exp(-x))
 
-    def gradient(self, x):
+    def gradient(self, x, var='x'):   # (wx+b)'_w = x, (wx+b)'_b = 1, (wx+b)'_x = w
         if self.type_ == 'linear':
-            return self.params['w']
+            if var == 'w':  # todo: check
+                return x
+            elif var == 'b':
+                return np.ones_like(self.params['b'])
+            elif var == 'x':
+                return self.params['w']
+            else:
+                raise Exception('var for a gradient is not recognized')
         elif self.type_ == 'arctan':
+            if var != 'x': raise Exception('var for a non-linear layer is not recognized')
             return 1./(1.+x**2)
         elif self.type_ == 'ReLu':
+            if var != 'x': raise Exception('var for a non-linear layer is not recognized')
             return 1.*(x > 0)
         elif self.type_ == 'tanh':
+            if var != 'x': raise Exception('var for a non-linear layer is not recognized')
             return 1.-np.tanh(x)**2
         elif self.type_ == 'sigmoid':
+            if var != 'x': raise Exception('var for a non-linear layer is not recognized')
             return 1./(1.+np.exp(-x))-1./(1.+np.exp(-x))**2
 
     @staticmethod
@@ -52,3 +63,17 @@ class Layer:
         for layer in layers:
             ret = layer.act(ret)
         return ret
+
+    @staticmethod
+    def layers_grad(layers, layer_id, x):
+        trunc_act = Layer.layers_act(layers[:layer_id], x)
+        n_layers = len(layers)
+        grad_w = layers[layer_id].gradient(trunc_act, var='w')
+        grad_b = layers[layer_id].gradient(trunc_act, var='b')
+        grad_x = layers[layer_id].gradient(trunc_act, var='x')
+        mult = 1
+        for curr_layer_id in range(layer_id + 1, n_layers):
+            trunc_act = layers[curr_layer_id - 1].act(trunc_act)
+            mult *= layers[curr_layer_id].gradient(trunc_act, var='x')
+
+        return {'w': mult * grad_w, 'b': mult * grad_b, 'x': mult*grad_x}

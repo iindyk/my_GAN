@@ -30,7 +30,7 @@ class Generator:
 
     def loss(self, discriminator, z):
         d_generated = self.act(z)
-        d_union = np.append(self.train_data, d_generated, axis=0)
+        '''d_union = np.append(self.train_data, d_generated, axis=0)
         l_generated = np.array([-1.]*len(d_generated))                  # todo: how to generate labels?
         l_union = np.append(self.train_labels, l_generated)
 
@@ -44,14 +44,17 @@ class Generator:
         n_test = len(self.test_labels)
         for i in range(n_test):
             prob_approx += max(self.test_labels[i]*(w.dot(self.test_data[i])+b), -1)
-        prob_approx /= n_test
+        prob_approx /= n_test'''
 
-        return tf.reduce_mean(tf.log(1-discriminator.act(d_generated)))+self.a*prob_approx
+        return tf.reduce_mean(tf.log(1-discriminator.act(d_generated)))  # +self.a*prob_approx
 
-    def loss_grad(self,layer_id, discriminator, z):    # todo
+    def loss_grad(self, layer_id, discriminator, z):    # todo
         if self.layers[layer_id].type_ != 'linear':
             raise Exception('call of a gradient for a non-linear layer')
-
         # gradient of G(z)
-
-        return None
+        g_grad = Layer.layers_grad(self.layers, layer_id, z)
+        g_z = self.act(z)
+        mult = (-1./(1-discriminator.act(g_z))) * \
+            Layer.layers_grad(discriminator.layers, len(discriminator.layers)-1, g_z)['x']
+        # todo: 1/n ?
+        return {'w': np.sum(mult*g_grad['w']), 'b': np.sum(mult*g_grad['b']), 'x': np.sum(mult*g_grad['x'])}
