@@ -5,18 +5,21 @@ class Layer:
     type_ = None
     params = {}
 
-    def __init__(self, type_, input_shape=None, output_shape=None):
+    def __init__(self, profile):
+        type_ = profile['type']
         if type_ not in ('linear', 'arctan', 'ReLu', 'tanh', 'sigmoid'):
             raise Exception('unknown layer type')
 
-        if type_ == 'linear' and (input_shape is None or output_shape is None):
+        if type_ == 'linear' and ('in' not in profile or 'out' not in profile):
             raise Exception('no input or output shape given for linear layer')
 
-        if type_ != 'linear' and (input_shape is not None or output_shape is not None):
+        if type_ != 'linear' and ('in' in profile or 'out' in profile):
             raise Warning('input or output shape given for non-linear layer: ignored')
 
         # set parameters
         if type_ == 'linear':
+            input_shape = profile['in']
+            output_shape = profile['out']
             self.params = {'w': np.random.normal(size=(input_shape, output_shape)),
                            'b': np.random.normal(size=output_shape)}
         self.type_ = type_

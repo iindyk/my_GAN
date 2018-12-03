@@ -8,8 +8,8 @@ class Discriminator:
 
     def __init__(self, layers_profile):
         # add layers
-        for layer_type in layers_profile:
-            self.layers.append(Layer(layer_type))
+        for l_prof in layers_profile:
+            self.layers.append(Layer(l_prof))
 
     def act(self, d):
         ret = np.copy(d)

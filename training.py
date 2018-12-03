@@ -6,18 +6,33 @@ import matplotlib.pyplot as plt
 
 
 n = 200
-m = 2
+m = 20
 nit = 100
 nit_dis = 10
 sample_size = 10
 step = 1e-4
-gen_layers_profile = {}
+gen_layers_profile = [{'type': 'linear', 'in': sample_size, 'out': 64},
+                      {'type': 'ReLu'},
+                      {'type': 'linear', 'in': 64, 'out': 128},
+                      {'type': 'ReLu'},
+                      {'type': 'linear', 'in': 128, 'out': 256},
+                      {'type': 'ReLu'},
+                      {'type': 'linear', 'in': 256, 'out': m},
+                      {'type': 'tanh'}]
+
+dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 128},
+                      {'type': 'ReLu'},
+                      {'type': 'linear', 'in': 128, 'out': 64},
+                      {'type': 'ReLu'},
+                      {'type': 'linear', 'in': 64, 'out': 1},
+                      {'type': 'sigmoid'}]
 
 train_data, train_labels, test_data, test_labels = get_toy_data(n, m)   # get data
+n_train = len(train_labels)
 
 # initialize
-generator = Generator([],[],[],[],[])
-discriminator = Discriminator([])
+generator = Generator(gen_layers_profile, train_data, train_labels, test_data, test_labels)
+discriminator = Discriminator(dis_layers_profile)
 
 n_gen_layers = len(generator.layers)
 n_dis_layers = len(discriminator.layers)
@@ -31,7 +46,7 @@ d_generated = []
 for i in range(nit):
     for j in range(nit_dis):
         z = np.random.normal(size=sample_size)
-        d_real = train_data[np.random.randint(len(data), size=sample_size)]
+        d_real = train_data[np.random.randint(n_train, size=sample_size)]
         d_generated = generator.act(z)
 
         # make gradient descent step for each linear layer parameters for discriminator
