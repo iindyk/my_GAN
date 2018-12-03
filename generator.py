@@ -47,7 +47,7 @@ class Generator:
         prob_approx /= n_test'''
 
         if discriminator.act(d_generated)[0] == 1.:
-            return 1000
+            return 10.
         return np.mean(np.log(1-discriminator.act(d_generated)))  # +self.a*prob_approx
 
     def loss_grad(self, layer_id, discriminator, z):    # todo

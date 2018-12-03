@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 n = 200
 m = 20
-nit = 100
+nit = 10000
 nit_dis = 10
 sample_size = 10
 step = 1e-4

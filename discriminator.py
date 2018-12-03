@@ -20,7 +20,7 @@ class Discriminator:
 
     def loss(self, d_real, d_generated):
         if self.act(d_generated)[0] == 1. or self.act(d_real)[0] == 0.:
-            return 1000.
+            return 10.
         return np.mean(np.log(self.act(d_real))+np.log(1. - self.act(d_generated)))
 
     def loss_grad(self, layer_id, d_real, d_generated):     # todo
