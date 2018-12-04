@@ -20,8 +20,8 @@ class Layer:
         if type_ == 'linear':
             input_shape = profile['in']
             output_shape = profile['out']
-            self.params = {'w': np.random.normal(size=(input_shape, output_shape)),
-                           'b': np.random.normal(size=output_shape)}
+            self.params = {'w': np.random.normal(scale=1./np.sqrt(input_shape/2.), size=(input_shape, output_shape)),
+                           'b': np.random.normal(scale=1./np.sqrt(input_shape/2.), size=output_shape)}
         self.type_ = type_
 
     def act(self, x):
