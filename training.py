@@ -47,12 +47,12 @@ d_generated = []
 # initialize generator and discriminator old gradients
 dis_updates_old = {}
 for layer_id in range(n_dis_layers):
-    if discriminator.layers[layer_id] == 'linear':
+    if discriminator.layers[layer_id].type_ == 'linear':
         dis_updates_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
 
 gen_updates_old = {}
 for layer_id in range(n_gen_layers):
-    if generator.layers[layer_id] == 'linear':
+    if generator.layers[layer_id].type_ == 'linear':
         gen_updates_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
 
 # training
@@ -62,18 +62,18 @@ for i in range(nit):
         d_real = train_data[np.random.randint(n_train, size=batch_size)]
         d_generated = generator.act(z)
 
-        # todo: momentum learning rule
         # make gradient descent step for each linear layer parameters for discriminator
         dis_gradients = {}
 
         # calculate discriminator gradients for current state
         for layer_id in range(n_dis_layers):
-            if discriminator.layers[layer_id] == 'linear':
+            if discriminator.layers[layer_id].type_ == 'linear':
                 dis_gradients[layer_id] = discriminator.loss_grad(layer_id, d_real, d_generated)
 
         # perform gradient ascent for discriminator
         for layer_id in range(n_dis_layers):
-            if discriminator.layers[layer_id] == 'linear':
+            if discriminator.layers[layer_id].type_ == 'linear':
+                # momentum learning rule
                 upd_w = step*dis_gradients[layer_id]['w'] + \
                     step*momentum_alpha*dis_updates_old[layer_id]['w']
                 upd_b = step*dis_gradients[layer_id]['b'] + \
@@ -90,16 +90,17 @@ for i in range(nit):
 
     # calculate generator gradients in current state
     for layer_id in range(n_gen_layers):
-        if generator.layers[layer_id] == 'linear':
+        if generator.layers[layer_id].type_ == 'linear':
             gen_gradients[layer_id] = generator.loss_grad(layer_id, discriminator, z)
 
     # perform gradient descent for generator
     for layer_id in range(n_gen_layers):
-        if generator.layers[layer_id] == 'linear':
+        if generator.layers[layer_id].type_ == 'linear':
+            # momentum learning rule
             upd_w = -step * gen_gradients[layer_id]['w'] - \
-                    step * momentum_alpha * gen_updates_old[layer_id]['w']
+                step * momentum_alpha * gen_updates_old[layer_id]['w']
             upd_b = -step * gen_gradients[layer_id]['b'] - \
-                    step * momentum_alpha * gen_updates_old[layer_id]['b']
+                step * momentum_alpha * gen_updates_old[layer_id]['b']
             gen_updates_old[layer_id] = {}
             generator.layers[layer_id].params['w'] += upd_w
             gen_updates_old[layer_id]['w'] = upd_w

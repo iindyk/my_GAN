@@ -46,7 +46,7 @@ class Generator:
             prob_approx += max(self.test_labels[i]*(w.dot(self.test_data[i])+b), -1)
         prob_approx /= n_test'''
 
-        return np.mean(np.log(1-discriminator.act(d_generated)))  # +self.a*prob_approx
+        return np.mean(np.log(1.-discriminator.act(d_generated)))  # +self.a*prob_approx
 
     def loss_grad(self, layer_id, discriminator, z):    # todo
         if self.layers[layer_id].type_ != 'linear':
@@ -54,7 +54,9 @@ class Generator:
         # gradient of G(z)
         g_grad = Layer.layers_grad(self.layers, layer_id, z)
         g_z = self.act(z)
+        n_z = len(z)
         mult = (-1./(1-discriminator.act(g_z))) * \
             Layer.layers_grad(discriminator.layers, len(discriminator.layers)-1, g_z)['x']
-        # todo: 1/n ?
-        return {'w': np.sum(mult*g_grad['w']), 'b': np.sum(mult*g_grad['b']), 'x': np.sum(mult*g_grad['x'])}
+        return {'w': np.sum(mult*g_grad['w'])/n_z,
+                'b': np.sum(mult*g_grad['b'])/n_z,
+                'x': np.sum(mult*g_grad['x'])/n_z}

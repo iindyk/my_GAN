@@ -26,7 +26,7 @@ class Layer:
 
     def act(self, x):
         if self.type_ == 'linear':
-            return x.dot(self.params['w'])+self.params['b']
+            return x @ self.params['w']+self.params['b']
         elif self.type_ == 'arctan':
             return np.arctan(x)
         elif self.type_ == 'ReLu':
@@ -36,10 +36,10 @@ class Layer:
         elif self.type_ == 'sigmoid':
             return 1./(1.+np.exp(-x))
 
-    def gradient(self, x, var='x'):   # (wx+b)'_w = x, (wx+b)'_b = 1, (wx+b)'_x = w
+    def gradient(self, x, var='x'):   # (wx+b)'_w = x.T, (wx+b)'_b = 1, (wx+b)'_x = w
         if self.type_ == 'linear':
             if var == 'w':  # todo: check
-                return x
+                return (np.array([x, ]*np.shape(self.params['w'])[1])).T
             elif var == 'b':
                 return np.ones_like(self.params['b'])
             elif var == 'x':
@@ -69,20 +69,24 @@ class Layer:
 
     @staticmethod
     def layers_grad(layers, layer_id, x):
+        n, m = np.shape(x)
+
         trunc_act = Layer.layers_act(layers[:layer_id], x)
         n_layers = len(layers)
-        mult = 1
+        shape = np.shape(layers[layer_id].gradient(trunc_act, var='x'))
+        mult = np.ones((shape[0], shape[0]))
         for curr_layer_id in range(layer_id + 1, n_layers):
+            print(curr_layer_id)
             trunc_act = layers[curr_layer_id - 1].act(trunc_act)
-            mult *= layers[curr_layer_id].gradient(trunc_act, var='x')
+            mult = mult @ layers[curr_layer_id].gradient(trunc_act, var='x')
 
         grad_x = layers[layer_id].gradient(trunc_act, var='x')
         if layers[layer_id].type_ == 'linear':
             grad_w = layers[layer_id].gradient(trunc_act, var='w')
             grad_b = layers[layer_id].gradient(trunc_act, var='b')
-            return {'w': mult * grad_w, 'b': mult * grad_b, 'x': mult * grad_x}
+            return {'w': mult @ grad_w, 'b': mult @ grad_b, 'x': mult @ grad_x}
         else:
-            return {'x': mult * grad_x}
+            return {'x': mult @ grad_x}
 
 
 # deep copy of a gradient dictionary

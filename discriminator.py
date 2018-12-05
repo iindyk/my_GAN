@@ -26,9 +26,10 @@ class Discriminator:
             raise Exception('call of a gradient for a non-linear layer')
 
         # gradient of D(x):
+        n_r = len(d_real)
+        n_g = len(d_generated)
         d_grad_real = Layer.layers_grad(self.layers, layer_id, d_real)
         d_grad_gen = Layer.layers_grad(self.layers, layer_id, d_generated)
-        # todo: 1/n ?
-        return {'w': np.sum((1./self.act(d_real))*d_grad_real['w']-(1./(1.-self.act(d_generated)))*d_grad_gen['w']),
-                'b': np.sum((1./self.act(d_real))*d_grad_real['b']-(1./(1.-self.act(d_generated)))*d_grad_gen['b']),
-                'x': np.sum((1./self.act(d_real))*d_grad_real['x']-(1./(1.-self.act(d_generated)))*d_grad_gen['x'])}
+        return {'w': (1./self.act(d_real))*d_grad_real['w']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['w']/n_g,
+                'b': (1./self.act(d_real))*d_grad_real['b']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['b']/n_g,
+                'x': (1./self.act(d_real))*d_grad_real['x']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['x']/n_g}
