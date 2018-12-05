@@ -45,15 +45,15 @@ d_real = []
 d_generated = []
 
 # initialize generator and discriminator old gradients
-dis_gradients_old = {}
+dis_updates_old = {}
 for layer_id in range(n_dis_layers):
     if discriminator.layers[layer_id] == 'linear':
-        dis_gradients_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
+        dis_updates_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
 
-gen_gradients_old = {}
+gen_updates_old = {}
 for layer_id in range(n_gen_layers):
     if generator.layers[layer_id] == 'linear':
-        gen_gradients_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
+        gen_updates_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
 
 # training
 for i in range(nit):
@@ -71,15 +71,18 @@ for i in range(nit):
             if discriminator.layers[layer_id] == 'linear':
                 dis_gradients[layer_id] = discriminator.loss_grad(layer_id, d_real, d_generated)
 
-        # perform gradient descent for discriminator
+        # perform gradient ascent for discriminator
         for layer_id in range(n_dis_layers):
             if discriminator.layers[layer_id] == 'linear':
-                discriminator.layers[layer_id].params['w'] += step*dis_gradients[layer_id]['w'] + \
-                    step*momentum_alpha*dis_gradients_old[layer_id]['w']
-                discriminator.layers[layer_id].params['b'] += step*dis_gradients[layer_id]['b'] + \
-                    step*momentum_alpha*dis_gradients_old[layer_id]['b']
-
-        dis_gradients_old = grad_deep_copy(dis_gradients)
+                upd_w = step*dis_gradients[layer_id]['w'] + \
+                    step*momentum_alpha*dis_updates_old[layer_id]['w']
+                upd_b = step*dis_gradients[layer_id]['b'] + \
+                    step*momentum_alpha*dis_updates_old[layer_id]['b']
+                dis_updates_old[layer_id] = {}
+                discriminator.layers[layer_id].params['w'] += upd_w
+                dis_updates_old[layer_id]['w'] = upd_w
+                discriminator.layers[layer_id].params['b'] += upd_b
+                dis_updates_old[layer_id]['b'] = upd_b
 
     # make gradient descent step for each linear layer parameters for generator
     z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
@@ -93,12 +96,15 @@ for i in range(nit):
     # perform gradient descent for generator
     for layer_id in range(n_gen_layers):
         if generator.layers[layer_id] == 'linear':
-            generator.layers[layer_id].params['w'] -= step * gen_gradients[layer_id]['w'] - \
-                step*momentum_alpha*gen_gradients_old[layer_id]['w']
-            generator.layers[layer_id].params['b'] -= step * gen_gradients[layer_id]['b'] - \
-                step*momentum_alpha*gen_gradients_old[layer_id]['b']
-
-    gen_gradients_old = grad_deep_copy(gen_gradients)
+            upd_w = -step * gen_gradients[layer_id]['w'] - \
+                    step * momentum_alpha * gen_updates_old[layer_id]['w']
+            upd_b = -step * gen_gradients[layer_id]['b'] - \
+                    step * momentum_alpha * gen_updates_old[layer_id]['b']
+            gen_updates_old[layer_id] = {}
+            generator.layers[layer_id].params['w'] += upd_w
+            gen_updates_old[layer_id]['w'] = upd_w
+            generator.layers[layer_id].params['b'] += upd_b
+            gen_updates_old[layer_id]['b'] = upd_b
 
     # append losses for graphing
     gl = generator.loss(discriminator, z)
