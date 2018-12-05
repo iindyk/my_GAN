@@ -83,3 +83,14 @@ class Layer:
             return {'w': mult * grad_w, 'b': mult * grad_b, 'x': mult * grad_x}
         else:
             return {'x': mult * grad_x}
+
+
+# deep copy of a gradient dictionary
+def grad_deep_copy(gradient):
+    gradient_copy = {}
+    for key, dict_val in gradient.items():
+        gradient_copy[key] = {}
+        for key_inner, val in dict_val.items():
+            gradient_copy[key][key_inner] = np.copy(val)
+
+    return gradient_copy

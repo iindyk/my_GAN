@@ -4,32 +4,31 @@ from discriminator import *
 from data import *
 import matplotlib.pyplot as plt
 
+# training parameters
+nit = 100000
+nit_dis = 1
+batch_size = 100
+step = .1
+momentum_alpha = .5
 
-nit = 10000
-nit_dis = 100
-batch_size = 128
-step = 1e-3
-
-
-train_data, train_labels, test_data, test_labels = get_mnist_data()  # get data
+# data fetch
+train_data, train_labels, test_data, test_labels = get_mnist_data()
 n_train = len(train_labels)
 n, m = np.shape(train_data)
 
 # generator and discriminator profiles
-gen_layers_profile = [{'type': 'linear', 'in': batch_size, 'out': 64},
+gen_layers_profile = [{'type': 'linear', 'in': batch_size, 'out': 1200},
                       {'type': 'ReLu'},
-                      {'type': 'linear', 'in': 64, 'out': 128},
+                      {'type': 'linear', 'in': 1200, 'out': 1200},
                       {'type': 'ReLu'},
-                      {'type': 'linear', 'in': 128, 'out': 256},
-                      {'type': 'ReLu'},
-                      {'type': 'linear', 'in': 256, 'out': m},
-                      {'type': 'tanh'}]
+                      {'type': 'linear', 'in': 1200, 'out': m},
+                      {'type': 'sigmoid'}]
 
-dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 128},
+dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
                       {'type': 'ReLu'},
-                      {'type': 'linear', 'in': 128, 'out': 64},
+                      {'type': 'linear', 'in': 240, 'out': 240},
                       {'type': 'ReLu'},
-                      {'type': 'linear', 'in': 64, 'out': 1},
+                      {'type': 'linear', 'in': 240, 'out': 1},
                       {'type': 'sigmoid'}]
 
 # initialize
@@ -45,12 +44,25 @@ gen_losses = []
 d_real = []
 d_generated = []
 
+# initialize generator and discriminator old gradients
+dis_gradients_old = {}
+for layer_id in range(n_dis_layers):
+    if discriminator.layers[layer_id] == 'linear':
+        dis_gradients_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
+
+gen_gradients_old = {}
+for layer_id in range(n_gen_layers):
+    if generator.layers[layer_id] == 'linear':
+        gen_gradients_old[layer_id] = {'w': 0., 'b': 0., 'x': 0.}
+
+# training
 for i in range(nit):
     for j in range(nit_dis):
-        z = np.random.normal(size=batch_size)
+        z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
         d_real = train_data[np.random.randint(n_train, size=batch_size)]
         d_generated = generator.act(z)
 
+        # todo: momentum learning rule
         # make gradient descent step for each linear layer parameters for discriminator
         dis_gradients = {}
 
@@ -59,14 +71,18 @@ for i in range(nit):
             if discriminator.layers[layer_id] == 'linear':
                 dis_gradients[layer_id] = discriminator.loss_grad(layer_id, d_real, d_generated)
 
-        # perform gradient descent for gradient
+        # perform gradient descent for discriminator
         for layer_id in range(n_dis_layers):
             if discriminator.layers[layer_id] == 'linear':
-                discriminator.layers[layer_id].params['w'] += step*dis_gradients[layer_id]['w']
-                discriminator.layers[layer_id].params['b'] += step*dis_gradients[layer_id]['b']
+                discriminator.layers[layer_id].params['w'] += step*dis_gradients[layer_id]['w'] + \
+                    step*momentum_alpha*dis_gradients_old[layer_id]['w']
+                discriminator.layers[layer_id].params['b'] += step*dis_gradients[layer_id]['b'] + \
+                    step*momentum_alpha*dis_gradients_old[layer_id]['b']
+
+        dis_gradients_old = grad_deep_copy(dis_gradients)
 
     # make gradient descent step for each linear layer parameters for generator
-    z = np.random.normal(size=batch_size)
+    z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
     gen_gradients = {}
 
     # calculate generator gradients in current state
@@ -77,12 +93,21 @@ for i in range(nit):
     # perform gradient descent for generator
     for layer_id in range(n_gen_layers):
         if generator.layers[layer_id] == 'linear':
-            generator.layers[layer_id].params['w'] -= step * gen_gradients[layer_id]['w']
-            generator.layers[layer_id].params['b'] -= step * gen_gradients[layer_id]['b']
+            generator.layers[layer_id].params['w'] -= step * gen_gradients[layer_id]['w'] - \
+                step*momentum_alpha*gen_gradients_old[layer_id]['w']
+            generator.layers[layer_id].params['b'] -= step * gen_gradients[layer_id]['b'] - \
+                step*momentum_alpha*gen_gradients_old[layer_id]['b']
+
+    gen_gradients_old = grad_deep_copy(gen_gradients)
 
     # append losses for graphing
-    dis_losses.append(discriminator.loss(d_real, d_generated))
-    gen_losses.append(generator.loss(discriminator, z))
+    gl = generator.loss(discriminator, z)
+    dl = discriminator.loss(d_real, d_generated)
+    dis_losses.append(dl)
+    gen_losses.append(gl)
+
+    if i % 1000 == 0:
+        print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
 
 # graphing
 _, ax = plt.subplots()
