@@ -4,25 +4,24 @@ import numpy as np
 class Layer:
     type_ = None
     params = {}
+    n_in = None
+    n_out = None
 
     def __init__(self, profile):
         type_ = profile['type']
         if type_ not in ('linear', 'arctan', 'ReLu', 'tanh', 'sigmoid'):
             raise Exception('unknown layer type')
 
-        if type_ == 'linear' and ('in' not in profile or 'out' not in profile):
-            raise Exception('no input or output shape given for linear layer')
-
-        if type_ != 'linear' and ('in' in profile or 'out' in profile):
-            raise Warning('input or output shape given for non-linear layer: ignored')
+        if 'in' not in profile or 'out' not in profile:
+            raise Exception('no input or output shape given')
 
         # set parameters
-        if type_ == 'linear':
-            input_shape = profile['in']
-            output_shape = profile['out']
-            self.params = {'w': np.random.normal(scale=1./np.sqrt(input_shape/2.), size=(input_shape, output_shape)),
-                           'b': np.random.normal(scale=1./np.sqrt(input_shape/2.), size=output_shape)}
+        self.n_in = profile['in']
+        self.n_out = profile['out']
         self.type_ = type_
+        if type_ == 'linear':
+            self.params = {'w': np.random.normal(scale=1./np.sqrt(self.n_in/2.), size=(self.n_in, self.n_out)),
+                           'b': np.random.normal(scale=1./np.sqrt(self.n_in/2.), size=self.n_out)}
 
     def act(self, x):
         if self.type_ == 'linear':
@@ -34,17 +33,16 @@ class Layer:
         elif self.type_ == 'tanh':
             return np.tanh(x)
         elif self.type_ == 'sigmoid':
-            return 1./(1.+np.exp(-x))
+            return np.exp(x)/(np.exp(x)+1.)
 
     def gradient(self, x, var='x'):   # (wx+b)'_w = x.T, (wx+b)'_b = 1, (wx+b)'_x = w
         assert np.ndim(x) == 1
         if self.type_ == 'linear':
             if var == 'w':  # todo: check
-                n_in, n_out = np.shape(self.params['w'])
-                ret = np.zeros(shape=(n_out, n_in, n_out))
-                for i in range(n_out):
+                ret = np.zeros(shape=(self.n_out, self.n_in, self.n_out))
+                for i in range(self.n_out):
                     ret[i, :, i] = x
-                return np.reshape(ret, newshape=(n_out, -1))
+                return np.reshape(ret, newshape=(self.n_out, -1))
             elif var == 'b':
                 return np.ones_like(self.params['b'])
             elif var == 'x':
@@ -78,16 +76,17 @@ class Layer:
         lin = (layers[layer_id].type_ == 'linear')
         # find grad for each input. Output must be a number!!!
         assert np.ndim(Layer.layers_act(layers, x[0])) == 1
-        # gradient with respect to x: (n, n, m)
+        # gradient with respect to x: (n, n_in, 1)
         # gradient with respect to w: (n, w_in, w_out)
         # gradient with respect to b: (n, w_out, 1)
 
         n_layers = len(layers)
-        grad_x = np.zeros(shape=(n, n, m))
+        # get dimension of x_in for layers[layer_id]
+
+        grad_x = np.zeros(shape=(n, layers[layer_id].n_in))
         if lin:
-            w_in, w_out = np.shape(layers[layer_id].params['w'])
-            grad_w = np.zeros(shape=(n, w_in, w_out))
-            grad_b = np.zeros(shape=(n, w_out, 1))
+            grad_w = np.zeros(shape=(n, layers[layer_id].n_in, layers[layer_id].n_out))
+            grad_b = np.zeros(shape=(n, layers[layer_id].n_out))
         for i in range(n):
             trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
             g_x = layers[layer_id].gradient(trunc_act, var='x')
@@ -95,10 +94,11 @@ class Layer:
             for curr_layer_id in range(layer_id + 1, n_layers):
                 trunc_act = layers[curr_layer_id - 1].act(trunc_act)
                 mult = layers[curr_layer_id].gradient(trunc_act, var='x') @ mult
-            grad_x[i, :, :] = mult @ g_x
+            grad_x[i, :] = mult @ g_x
             if lin:
-                grad_w[i, :, :] = np.reshape(mult @ layers[layer_id].gradient(trunc_act, var='w'), (w_in, w_out))
-                grad_b[i, :, :] = mult @ layers[layer_id].gradient(trunc_act, var='b')
+                grad_w[i, :, :] = np.reshape(mult @ layers[layer_id].gradient(trunc_act, var='w'),
+                                             (layers[layer_id].n_in, layers[layer_id].n_out))
+                grad_b[i, :] = mult @ layers[layer_id].gradient(trunc_act, var='b')
 
         if lin:
             return {'w': grad_w, 'b': grad_b, 'x': grad_x}
