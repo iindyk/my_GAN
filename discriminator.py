@@ -30,6 +30,24 @@ class Discriminator:
         n_g = len(d_generated)
         d_grad_real = Layer.layers_grad(self.layers, layer_id, d_real)
         d_grad_gen = Layer.layers_grad(self.layers, layer_id, d_generated)
-        return {'w': (1./self.act(d_real))*d_grad_real['w']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['w']/n_g,
-                'b': (1./self.act(d_real))*d_grad_real['b']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['b']/n_g,
-                'x': (1./self.act(d_real))*d_grad_real['x']/n_r-(1./(1.-self.act(d_generated)))*d_grad_gen['x']/n_g}
+
+        d_w_r = 0
+        d_b_r = 0
+        d_x_r = 0
+        d_inv = 1./self.act(d_real)
+        for i in range(n_r):
+            d_w_r += d_inv[i]*d_grad_real['w'][i, :, :]
+            d_b_r += d_inv[i]*d_grad_real['b'][i, :]
+            d_x_r += d_inv[i]*d_grad_real['x'][i, :]
+
+        d_w_g = 0
+        d_b_g = 0
+        d_x_g = 0
+        g_inv = 1./(1.-self.act(d_generated))
+        for j in range(n_g):
+            d_w_g += g_inv[j]*d_grad_gen['w'][j, :, :]
+            d_b_g += g_inv[j]*d_grad_gen['b'][j, :]
+            d_x_g += g_inv[j]*d_grad_gen['x'][j, :]
+        return {'w': d_w_r/n_r - d_w_g/n_g,
+                'b': d_b_r/n_r - d_b_g/n_g,
+                'x': d_x_r/n_r - d_x_g/n_g}

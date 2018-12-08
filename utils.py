@@ -37,27 +37,32 @@ class Layer:
             return 1./(1.+np.exp(-x))
 
     def gradient(self, x, var='x'):   # (wx+b)'_w = x.T, (wx+b)'_b = 1, (wx+b)'_x = w
+        assert np.ndim(x) == 1
         if self.type_ == 'linear':
             if var == 'w':  # todo: check
-                return (np.array([x, ]*np.shape(self.params['w'])[1])).T
+                n_in, n_out = np.shape(self.params['w'])
+                ret = np.zeros(shape=(n_out, n_in, n_out))
+                for i in range(n_out):
+                    ret[i, :, i] = x
+                return np.reshape(ret, newshape=(n_out, -1))
             elif var == 'b':
                 return np.ones_like(self.params['b'])
             elif var == 'x':
-                return self.params['w']
+                return self.params['w'].T
             else:
                 raise Exception('var for a gradient is not recognized')
         elif self.type_ == 'arctan':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return 1./(1.+x**2)
+            return np.diag(1./(1.+x**2))
         elif self.type_ == 'ReLu':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return 1.*(x > 0)
+            return np.diag(1.*(x > 0))
         elif self.type_ == 'tanh':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return 1.-np.tanh(x)**2
+            return np.diag(1.-np.tanh(x)**2)
         elif self.type_ == 'sigmoid':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return 1./(1.+np.exp(-x))-1./(1.+np.exp(-x))**2
+            return np.diag(1./(1.+np.exp(-x))-1./(1.+np.exp(-x))**2)
 
     @staticmethod
     def layers_act(layers, x):
@@ -70,23 +75,35 @@ class Layer:
     @staticmethod
     def layers_grad(layers, layer_id, x):
         n, m = np.shape(x)
+        lin = (layers[layer_id].type_ == 'linear')
+        # find grad for each input. Output must be a number!!!
+        assert np.ndim(Layer.layers_act(layers, x[0])) == 1
+        # gradient with respect to x: (n, n, m)
+        # gradient with respect to w: (n, w_in, w_out)
+        # gradient with respect to b: (n, w_out, 1)
 
-        trunc_act = Layer.layers_act(layers[:layer_id], x)
         n_layers = len(layers)
-        shape = np.shape(layers[layer_id].gradient(trunc_act, var='x'))
-        mult = np.ones((shape[0], shape[0]))
-        for curr_layer_id in range(layer_id + 1, n_layers):
-            print(curr_layer_id)
-            trunc_act = layers[curr_layer_id - 1].act(trunc_act)
-            mult = mult @ layers[curr_layer_id].gradient(trunc_act, var='x')
+        grad_x = np.zeros(shape=(n, n, m))
+        if lin:
+            w_in, w_out = np.shape(layers[layer_id].params['w'])
+            grad_w = np.zeros(shape=(n, w_in, w_out))
+            grad_b = np.zeros(shape=(n, w_out, 1))
+        for i in range(n):
+            trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
+            g_x = layers[layer_id].gradient(trunc_act, var='x')
+            mult = np.identity(np.shape(g_x)[0])
+            for curr_layer_id in range(layer_id + 1, n_layers):
+                trunc_act = layers[curr_layer_id - 1].act(trunc_act)
+                mult = layers[curr_layer_id].gradient(trunc_act, var='x') @ mult
+            grad_x[i, :, :] = mult @ g_x
+            if lin:
+                grad_w[i, :, :] = np.reshape(mult @ layers[layer_id].gradient(trunc_act, var='w'), (w_in, w_out))
+                grad_b[i, :, :] = mult @ layers[layer_id].gradient(trunc_act, var='b')
 
-        grad_x = layers[layer_id].gradient(trunc_act, var='x')
-        if layers[layer_id].type_ == 'linear':
-            grad_w = layers[layer_id].gradient(trunc_act, var='w')
-            grad_b = layers[layer_id].gradient(trunc_act, var='b')
-            return {'w': mult @ grad_w, 'b': mult @ grad_b, 'x': mult @ grad_x}
+        if lin:
+            return {'w': grad_w, 'b': grad_b, 'x': grad_x}
         else:
-            return {'x': mult @ grad_x}
+            return {'x': grad_x}
 
 
 # deep copy of a gradient dictionary
