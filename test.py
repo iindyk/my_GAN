@@ -19,7 +19,7 @@ n, m = np.shape(train_data)
 dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
                       {'type': 'ReLu', 'in': 240, 'out': 240},
                       {'type': 'linear', 'in': 240, 'out': 1},
-                      {'type': 'tanh', 'in': 1, 'out': 1}]
+                      {'type': 'sigmoid', 'in': 1, 'out': 1}]
 
 # initialize
 discriminator = Discriminator(dis_layers_profile)
@@ -43,12 +43,9 @@ for i in range(nit):
     d_generated = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, m))
 
     # make gradient descent step for each linear layer parameters for discriminator
-    dis_gradients = {}
 
     # calculate discriminator gradients for current state
-    for layer_id in range(n_dis_layers):
-        if discriminator.layers[layer_id].type_ == 'linear':
-            dis_gradients[layer_id] = discriminator.loss_grad(layer_id, d_real, d_generated)
+    dis_gradients = discriminator.loss_grad(d_real, d_generated)
 
     # perform gradient ascent for discriminator
     for layer_id in range(n_dis_layers):

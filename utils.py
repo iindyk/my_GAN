@@ -71,7 +71,7 @@ class Layer:
         return ret
 
     @staticmethod
-    def layers_grad(layers, layer_id, x):
+    def layers_grad_(layers, layer_id, x):
         n, m = np.shape(x)
         lin = (layers[layer_id].type_ == 'linear')
         # find grad for each input. Output must be a number!!!
@@ -105,13 +105,38 @@ class Layer:
         else:
             return {'x': grad_x}
 
+    @staticmethod
+    def layers_grad(layers, x):
+        n, m = np.shape(x)
+        n_layers = len(layers)
+        # find grad for each input. Output must be a number!!!
+        assert layers[n_layers-1].n_out == 1
+        # gradient with respect to x: (n, n_in, 1)
+        # gradient with respect to w: (n, w_in, w_out)
+        # gradient with respect to b: (n, w_out, 1)
 
-# deep copy of a gradient dictionary
-def grad_deep_copy(gradient):
-    gradient_copy = {}
-    for key, dict_val in gradient.items():
-        gradient_copy[key] = {}
-        for key_inner, val in dict_val.items():
-            gradient_copy[key][key_inner] = np.copy(val)
+        # initial gradient
+        last_grad = np.zeros(shape=(n, layers[n_layers-1].n_in, layers[n_layers-1].n_in))
+        for i in range(n):
+            last_grad[i, :, :] = np.identity(layers[n_layers-1].n_in)
+        grad = {n_layers: {'x': last_grad}}
 
-    return gradient_copy
+        for layer_id in reversed(range(n_layers)):
+            grad_x = np.zeros(shape=(n, layers[layer_id].n_in))
+            if layers[layer_id].type_ == 'linear':
+                grad_w = np.zeros(shape=(n, layers[layer_id].n_in, layers[layer_id].n_out))
+                grad_b = np.zeros(shape=(n, layers[layer_id].n_out))
+                for i in range(n):
+                    trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
+                    grad_x[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    grad_w[i, :, :] = np.reshape(grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='w'),
+                                                 (layers[layer_id].n_in, layers[layer_id].n_out))
+                    grad_b[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
+                grad[layer_id] = {'w': grad_w, 'b': grad_b, 'x': grad_x}
+            else:
+                for i in range(n):
+                    trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
+                    grad_x[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                grad[layer_id] = {'x': grad_x}
+        return grad
+
