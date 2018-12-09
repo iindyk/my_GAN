@@ -5,8 +5,8 @@ from data import *
 import matplotlib.pyplot as plt
 
 # training parameters
-nit = 1000
-batch_size = 100
+nit = 800
+batch_size = 32
 step = .01
 momentum_alpha = .5
 

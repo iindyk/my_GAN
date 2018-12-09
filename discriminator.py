@@ -19,7 +19,6 @@ class Discriminator:
         return ret
 
     def loss(self, d_real, d_generated):
-        #print(self.act(d_generated))
         return np.mean(np.log(self.act(d_real))+np.log(1. - self.act(d_generated)))
 
     def loss_grad_(self, layer_id, d_real, d_generated):     # todo: return gradient for each layer
