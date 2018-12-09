@@ -71,7 +71,7 @@ class Layer:
         return ret
 
     @staticmethod
-    def layers_grad_(layers, layer_id, x):
+    def _layers_grad(layers, layer_id, x):
         n, m = np.shape(x)
         lin = (layers[layer_id].type_ == 'linear')
         # find grad for each input. Output must be a number!!!
@@ -111,9 +111,9 @@ class Layer:
         n_layers = len(layers)
         # find grad for each input. Output must be a number!!!
         assert layers[n_layers-1].n_out == 1
-        # gradient with respect to x: (n, n_in, 1)
+        # gradient with respect to x: (n, n_in)
         # gradient with respect to w: (n, w_in, w_out)
-        # gradient with respect to b: (n, w_out, 1)
+        # gradient with respect to b: (n, w_out)
 
         # initial gradient
         last_grad = np.zeros(shape=(n, layers[n_layers-1].n_in, layers[n_layers-1].n_in))

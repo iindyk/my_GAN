@@ -5,9 +5,9 @@ from data import *
 import matplotlib.pyplot as plt
 
 # training parameters
-nit = 100000
+nit = 1000
 nit_dis = 1
-batch_size = 100
+batch_size = 32
 step = .1
 momentum_alpha = .5
 
@@ -18,18 +18,18 @@ n, m = np.shape(train_data)
 
 # generator and discriminator profiles
 gen_layers_profile = [{'type': 'linear', 'in': batch_size, 'out': 1200},
-                      {'type': 'ReLu'},
+                      {'type': 'ReLu', 'in': 1200, 'out': 1200},
                       {'type': 'linear', 'in': 1200, 'out': 1200},
-                      {'type': 'ReLu'},
+                      {'type': 'ReLu', 'in': 1200, 'out': 1200},
                       {'type': 'linear', 'in': 1200, 'out': m},
-                      {'type': 'sigmoid'}]
+                      {'type': 'sigmoid', 'in': m, 'out': m}]
 
 dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
-                      {'type': 'ReLu'},
+                      {'type': 'ReLu', 'in': 240, 'out': 240},
                       {'type': 'linear', 'in': 240, 'out': 240},
-                      {'type': 'ReLu'},
+                      {'type': 'ReLu', 'in': 240, 'out': 240},
                       {'type': 'linear', 'in': 240, 'out': 1},
-                      {'type': 'sigmoid'}]
+                      {'type': 'sigmoid', 'in': 1, 'out': 1}]
 
 # initialize
 generator = Generator(gen_layers_profile, train_data, train_labels, test_data, test_labels)
@@ -63,12 +63,8 @@ for i in range(nit):
         d_generated = generator.act(z)
 
         # make gradient descent step for each linear layer parameters for discriminator
-        dis_gradients = {}
-
         # calculate discriminator gradients for current state
-        for layer_id in range(n_dis_layers):
-            if discriminator.layers[layer_id].type_ == 'linear':
-                dis_gradients[layer_id] = discriminator.loss_grad(layer_id, d_real, d_generated)
+        dis_gradients = discriminator.loss_grad(d_real, d_generated)
 
         # perform gradient ascent for discriminator
         for layer_id in range(n_dis_layers):
@@ -86,12 +82,9 @@ for i in range(nit):
 
     # make gradient descent step for each linear layer parameters for generator
     z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
-    gen_gradients = {}
 
     # calculate generator gradients in current state
-    for layer_id in range(n_gen_layers):
-        if generator.layers[layer_id].type_ == 'linear':
-            gen_gradients[layer_id] = generator.loss_grad(layer_id, discriminator, z)
+    gen_gradients = generator.loss_grad(discriminator, z)
 
     # perform gradient descent for generator
     for layer_id in range(n_gen_layers):
@@ -113,7 +106,7 @@ for i in range(nit):
     dis_losses.append(dl)
     gen_losses.append(gl)
 
-    if i % 1000 == 0:
+    if i % 10 == 0:
         print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
 
 # graphing

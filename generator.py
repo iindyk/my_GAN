@@ -48,15 +48,31 @@ class Generator:
 
         return np.mean(np.log(1.-discriminator.act(d_generated)))  # +self.a*prob_approx
 
-    def loss_grad(self, layer_id, discriminator, z):    # todo
-        if self.layers[layer_id].type_ != 'linear':
-            raise Exception('call of a gradient for a non-linear layer')
-        # gradient of G(z)
-        g_grad = Layer.layers_grad(self.layers, layer_id, z)
+    def loss_grad(self, discriminator, z):
         g_z = self.act(z)
         n_z = len(z)
-        mult = (-1./(1-discriminator.act(g_z))) * \
-            Layer.layers_grad(discriminator.layers, len(discriminator.layers)-1, g_z)['x']
-        return {'w': np.sum(mult*g_grad['w'])/n_z,
-                'b': np.sum(mult*g_grad['b'])/n_z,
-                'x': np.sum(mult*g_grad['x'])/n_z}
+        n_in_g_z = len(g_z[0])
+        n_layers = len(self.layers)
+
+        # gradient of G(z)
+        g_grad = Layer.layers_grad(self.layers, z)
+        mult = np.zeros(shape=(n_z, n_in_g_z))
+        d_g_z = -1. / (1. - discriminator.act(g_z))
+        dis_grad_x = Layer.layers_grad(discriminator.layers, g_z)[0]['x']
+        for i in range(n_z):
+            mult[i, :] = d_g_z[i] * dis_grad_x[i, :]
+
+        grad = {}
+        for layer_id in range(n_layers):
+            if self.layers[layer_id].type_ != 'linear':
+                d_w = 0
+                d_b = 0
+                d_x = 0
+                for i in range(n_z):
+                    d_w += mult[i, :] @ g_grad[layer_id]['w'][i, :, :]
+                    d_b += mult[i, :] @ g_grad[layer_id]['b'][i, :]
+                    d_x += mult[i, :] @ g_grad[layer_id]['x'][i, :]
+
+                grad[layer_id] = {'w': d_w/n_z, 'b': d_b/n_z, 'x': d_x/n_z}
+
+        return grad

@@ -43,7 +43,6 @@ for i in range(nit):
     d_generated = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, m))
 
     # make gradient descent step for each linear layer parameters for discriminator
-
     # calculate discriminator gradients for current state
     dis_gradients = discriminator.loss_grad(d_real, d_generated)
 

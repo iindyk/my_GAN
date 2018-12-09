@@ -21,7 +21,7 @@ class Discriminator:
     def loss(self, d_real, d_generated):
         return np.mean(np.log(self.act(d_real))+np.log(1. - self.act(d_generated)))
 
-    def loss_grad_(self, layer_id, d_real, d_generated):     # todo: return gradient for each layer
+    def _loss_grad(self, layer_id, d_real, d_generated):     # todo: return gradient for each layer
         if self.layers[layer_id].type_ != 'linear':
             raise Exception('call of a gradient for a non-linear layer')
 
