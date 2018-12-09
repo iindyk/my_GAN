@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 # training parameters
 nit = 1000
 nit_dis = 1
-batch_size = 32
+batch_size = 16
 step = .1
 momentum_alpha = .5
+noise_dim = 1
 
 # data fetch
 train_data, train_labels, test_data, test_labels = get_mnist_data()
@@ -17,11 +18,11 @@ n_train = len(train_labels)
 n, m = np.shape(train_data)
 
 # generator and discriminator profiles
-gen_layers_profile = [{'type': 'linear', 'in': batch_size, 'out': 1200},
-                      {'type': 'ReLu', 'in': 1200, 'out': 1200},
-                      {'type': 'linear', 'in': 1200, 'out': 1200},
-                      {'type': 'ReLu', 'in': 1200, 'out': 1200},
-                      {'type': 'linear', 'in': 1200, 'out': m},
+gen_layers_profile = [{'type': 'linear', 'in': noise_dim, 'out': 128},
+                      {'type': 'ReLu', 'in': 128, 'out': 128},
+                      {'type': 'linear', 'in': 128, 'out': 128},
+                      {'type': 'ReLu', 'in': 128, 'out': 128},
+                      {'type': 'linear', 'in': 128, 'out': m},
                       {'type': 'sigmoid', 'in': m, 'out': m}]
 
 dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
@@ -58,7 +59,7 @@ for layer_id in range(n_gen_layers):
 # training
 for i in range(nit):
     for j in range(nit_dis):
-        z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
+        z = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, noise_dim))
         d_real = train_data[np.random.randint(n_train, size=batch_size)]
         d_generated = generator.act(z)
 
@@ -81,7 +82,7 @@ for i in range(nit):
                 dis_updates_old[layer_id]['b'] = upd_b
 
     # make gradient descent step for each linear layer parameters for generator
-    z = np.random.normal(scale=1./np.sqrt(m/2.), size=batch_size)
+    z = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, noise_dim))
 
     # calculate generator gradients in current state
     gen_gradients = generator.loss_grad(discriminator, z)

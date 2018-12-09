@@ -55,7 +55,7 @@ class Generator:
         n_layers = len(self.layers)
 
         # gradient of G(z)
-        g_grad = Layer.layers_grad(self.layers, z)
+        g_grad = Layer.layers_grad_multidim(self.layers, z)
         mult = np.zeros(shape=(n_z, n_in_g_z))
         d_g_z = -1. / (1. - discriminator.act(g_z))
         dis_grad_x = Layer.layers_grad(discriminator.layers, g_z)[0]['x']

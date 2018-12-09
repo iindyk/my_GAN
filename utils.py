@@ -140,3 +140,39 @@ class Layer:
                 grad[layer_id] = {'x': grad_x}
         return grad
 
+    @staticmethod
+    def layers_grad_multidim(layers, x):
+        n, m = np.shape(x)
+        n_layers = len(layers)
+        # find grad for each input.
+        n_out = layers[n_layers-1].n_out
+        # gradient with respect to x: (n, n_out n_in)
+        # gradient with respect to w: (n, n_out, w_in, w_out)
+        # gradient with respect to b: (n, n_out, w_out)
+
+        # initial gradient
+        last_grad = np.zeros(shape=(n, layers[n_layers-1].n_in, layers[n_layers-1].n_in))
+        for i in range(n):
+            last_grad[i, :, :] = np.identity(layers[n_layers-1].n_in)
+        grad = {n_layers: {'x': last_grad}}
+
+        for layer_id in reversed(range(n_layers)):
+            grad_x = np.zeros(shape=(n, n_out, layers[layer_id].n_in))
+            if layers[layer_id].type_ == 'linear':
+                grad_w = np.zeros(shape=(n, n_out, layers[layer_id].n_in, layers[layer_id].n_out))
+                grad_b = np.zeros(shape=(n, n_out, layers[layer_id].n_out))
+                for i in range(n):
+                    trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
+                    grad_x[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    for j in range(n_out):
+                        grad_w[i, j, :, :] = np.reshape(grad[layer_id+1]['x'][i, j, :] @ layers[layer_id].gradient(trunc_act, var='w'),
+                                                 (layers[layer_id].n_in, layers[layer_id].n_out))
+                    grad_b[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
+                grad[layer_id] = {'w': grad_w, 'b': grad_b, 'x': grad_x}
+            else:
+                for i in range(n):
+                    trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
+                    grad_x[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                grad[layer_id] = {'x': grad_x}
+        return grad
+

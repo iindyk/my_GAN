@@ -12,11 +12,7 @@ class Discriminator:
             self.layers.append(Layer(l_prof))
 
     def act(self, d):
-        ret = np.copy(d)
-        # sequentially apply layers
-        for layer in self.layers:
-            ret = layer.act(ret)
-        return ret
+        return Layer.layers_act(self.layers, d)
 
     def loss(self, d_real, d_generated):
         return np.mean(np.log(self.act(d_real))+np.log(1. - self.act(d_generated)))
