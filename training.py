@@ -5,29 +5,26 @@ from data import *
 import matplotlib.pyplot as plt
 
 # training parameters
-nit = 1000
+nit = 10000
 nit_dis = 1
-batch_size = 16
-step = .1
+batch_size = 32
+step = .01
 momentum_alpha = .5
 noise_dim = 1
 
 # data fetch
-train_data, train_labels, test_data, test_labels = get_mnist_data()
+train_data, train_labels, test_data, test_labels = get_toy_data(1000, 2)
+train_data = np.array(train_data)**2
 n_train = len(train_labels)
 n, m = np.shape(train_data)
 
 # generator and discriminator profiles
 gen_layers_profile = [{'type': 'linear', 'in': noise_dim, 'out': 128},
                       {'type': 'ReLu', 'in': 128, 'out': 128},
-                      {'type': 'linear', 'in': 128, 'out': 128},
-                      {'type': 'ReLu', 'in': 128, 'out': 128},
                       {'type': 'linear', 'in': 128, 'out': m},
                       {'type': 'sigmoid', 'in': m, 'out': m}]
 
 dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
-                      {'type': 'ReLu', 'in': 240, 'out': 240},
-                      {'type': 'linear', 'in': 240, 'out': 240},
                       {'type': 'ReLu', 'in': 240, 'out': 240},
                       {'type': 'linear', 'in': 240, 'out': 1},
                       {'type': 'sigmoid', 'in': 1, 'out': 1}]
@@ -107,7 +104,7 @@ for i in range(nit):
     dis_losses.append(dl)
     gen_losses.append(gl)
 
-    if i % 10 == 0:
+    if i % 100 == 0:
         print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
 
 # graphing

@@ -1,4 +1,5 @@
 import numpy as np
+import memory_profiler
 
 
 class Layer:
@@ -35,7 +36,7 @@ class Layer:
         elif self.type_ == 'sigmoid':
             return np.exp(x)/(np.exp(x)+1.)
 
-    def gradient(self, x, var='x'):   # (wx+b)'_w = x.T, (wx+b)'_b = 1, (wx+b)'_x = w
+    def gradient(self, x, var='x'):
         assert np.ndim(x) == 1
         if self.type_ == 'linear':
             if var == 'w':  # todo: check
@@ -44,7 +45,7 @@ class Layer:
                     ret[i, :, i] = x
                 return np.reshape(ret, newshape=(self.n_out, -1))
             elif var == 'b':
-                return np.ones_like(self.params['b'])
+                return np.diag(np.ones_like(self.params['b']))
             elif var == 'x':
                 return self.params['w'].T
             else:
@@ -141,6 +142,7 @@ class Layer:
         return grad
 
     @staticmethod
+    # @memory_profiler.profile
     def layers_grad_multidim(layers, x):
         n, m = np.shape(x)
         n_layers = len(layers)

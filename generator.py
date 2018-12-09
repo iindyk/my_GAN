@@ -64,14 +64,15 @@ class Generator:
 
         grad = {}
         for layer_id in range(n_layers):
-            if self.layers[layer_id].type_ != 'linear':
+            if self.layers[layer_id].type_ == 'linear':
                 d_w = 0
                 d_b = 0
                 d_x = 0
                 for i in range(n_z):
-                    d_w += mult[i, :] @ g_grad[layer_id]['w'][i, :, :]
-                    d_b += mult[i, :] @ g_grad[layer_id]['b'][i, :]
-                    d_x += mult[i, :] @ g_grad[layer_id]['x'][i, :]
+                    for j in range(n_in_g_z):
+                        d_w += mult[i, j] * g_grad[layer_id]['w'][i, j, :, :]
+                        d_b += mult[i, j] * g_grad[layer_id]['b'][i, j, :]
+                        d_x += mult[i, j] * g_grad[layer_id]['x'][i, j, :]
 
                 grad[layer_id] = {'w': d_w/n_z, 'b': d_b/n_z, 'x': d_x/n_z}
 

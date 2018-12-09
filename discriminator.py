@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from utils import *
+import memory_profiler
 
 
 class Discriminator:
@@ -48,6 +49,7 @@ class Discriminator:
                 'b': d_b_r/n_r - d_b_g/n_g,
                 'x': d_x_r/n_r - d_x_g/n_g}
 
+    #@memory_profiler.profile
     def loss_grad(self, d_real, d_generated):
         # gradient of D(x):
         n_r = len(d_real)
