@@ -5,15 +5,18 @@ from data import *
 import matplotlib.pyplot as plt
 
 # training parameters
-nit = 800
+nit = 10000
 batch_size = 32
 step = .01
 momentum_alpha = .5
 
 # data fetch
-train_data, train_labels, test_data, test_labels = get_mnist_data()
-n_train = len(train_labels)
+train_data, train_labels, test_data, test_labels = get_toy_data(1000, 2)
 n, m = np.shape(train_data)
+
+for i in range(n):
+    train_data[i, 0] = train_data[i, 1]
+
 
 # discriminator profile
 dis_layers_profile = [{'type': 'linear', 'in': m, 'out': 240},
@@ -39,7 +42,7 @@ for layer_id in range(n_dis_layers):
 
 # training
 for i in range(nit):
-    d_real = train_data[np.random.randint(n_train, size=batch_size)]
+    d_real = train_data[np.random.randint(n, size=batch_size)]
     d_generated = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, m))
 
     # make gradient descent step for each linear layer parameters for discriminator
@@ -64,7 +67,7 @@ for i in range(nit):
     dl = discriminator.loss(d_real, d_generated)
     dis_losses.append(dl)
 
-    if i % 10 == 0:
+    if i % 100 == 0:
         print('Step %i: Discriminator Loss: %f' % (i, dl))
 
 

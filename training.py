@@ -5,7 +5,7 @@ from data import *
 import matplotlib.pyplot as plt
 
 # training parameters
-nit = 10000
+nit = 1000
 nit_dis = 1
 batch_size = 32
 step = .01
@@ -13,10 +13,12 @@ momentum_alpha = .5
 noise_dim = 1
 
 # data fetch
-train_data, train_labels, test_data, test_labels = get_toy_data(1000, 2)
-train_data = np.array(train_data)**2
-n_train = len(train_labels)
+train_data, train_labels, test_data, test_labels = get_toy_data(10000, 3)
 n, m = np.shape(train_data)
+for i in range(n):
+    train_data[i, 0] = train_data[i, 2]
+    train_data[i, 1] = train_data[i, 2]
+
 
 # generator and discriminator profiles
 gen_layers_profile = [{'type': 'linear', 'in': noise_dim, 'out': 128},
@@ -57,7 +59,7 @@ for layer_id in range(n_gen_layers):
 for i in range(nit):
     for j in range(nit_dis):
         z = np.random.normal(scale=1./np.sqrt(m/2.), size=(batch_size, noise_dim))
-        d_real = train_data[np.random.randint(n_train, size=batch_size)]
+        d_real = train_data[np.random.randint(n, size=batch_size)]
         d_generated = generator.act(z)
 
         # make gradient descent step for each linear layer parameters for discriminator
@@ -88,9 +90,9 @@ for i in range(nit):
     for layer_id in range(n_gen_layers):
         if generator.layers[layer_id].type_ == 'linear':
             # momentum learning rule
-            upd_w = -step * gen_gradients[layer_id]['w'] - \
+            upd_w = -step * gen_gradients[layer_id]['w'] + \
                 step * momentum_alpha * gen_updates_old[layer_id]['w']
-            upd_b = -step * gen_gradients[layer_id]['b'] - \
+            upd_b = -step * gen_gradients[layer_id]['b'] + \
                 step * momentum_alpha * gen_updates_old[layer_id]['b']
             gen_updates_old[layer_id] = {}
             generator.layers[layer_id].params['w'] += upd_w
@@ -112,5 +114,5 @@ _, ax = plt.subplots()
 iterations = np.arange(nit)
 ax.plot(iterations, gen_losses, '-', label='generator loss')
 ax.plot(iterations, dis_losses, '-', label='discriminator loss')
-plt.legend(loc='upper left')
+plt.legend(loc='lower right')
 plt.show()
