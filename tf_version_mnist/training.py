@@ -4,9 +4,9 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
-nit = 10000
+nit = 3000
 display_step = 200
-learning_rate = 1e-2
+learning_rate = 0.02
 z_dim = 100
 batch_size = 16
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -15,7 +15,7 @@ x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train = []
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] in [1, 7]:
+    if y_train_all[i] in [1]:
         x_train.append(x_train_all[i])
 x_train = np.array(x_train)
 n = len(x_train)
