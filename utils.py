@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 import memory_profiler
 
 
@@ -178,3 +179,10 @@ class Layer:
                 grad[layer_id] = {'x': grad_x}
         return grad
 
+
+def conv2d(x, W):
+  return tf.nn.conv2d(input=x, filter=W, strides=[1, 1, 1, 1], padding='SAME')
+
+
+def avg_pool_2x2(x):
+  return tf.nn.avg_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
