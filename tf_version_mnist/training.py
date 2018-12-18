@@ -13,7 +13,6 @@ batch_size = 16
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 
 x_train = []
-
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
     if y_train_all[i] in [1, 7]:

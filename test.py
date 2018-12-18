@@ -70,7 +70,6 @@ for i in range(nit):
     if i % 100 == 0:
         print('Step %i: Discriminator Loss: %f' % (i, dl))
 
-
 # graphing
 _, ax = plt.subplots()
 iterations = np.arange(nit)
