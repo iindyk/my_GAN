@@ -4,18 +4,19 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
-nit = 3000
+nit = 10000
 display_step = 200
-learning_rate = 0.02
+learning_rate = 0.001
+momentum = 0.5
 z_dim = 100
-batch_size = 16
+batch_size = 32
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 
 x_train = []
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] in [1]:
+    if y_train_all[i] in [1, 7]:
         x_train.append(x_train_all[i])
 x_train = np.array(x_train)
 n = len(x_train)
@@ -57,10 +58,17 @@ g_grad = tf.gradients(xs=g_vars, ys=g_loss)
 # gradient descent step description
 new_d_vars = []
 new_g_vars = []
+d_accumulation = []
+g_accumulation = []
 for i in range(n_d_vars):
-    new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_grad[i]))
+    d_accumulation.append(tf.get_variable('accum_d'+str(i), shape=d_grad[i].get_shape(), trainable=False))
+    d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i])
+    new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
+
 for i in range(n_g_vars):
-    new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_grad[i]))
+    g_accumulation.append(tf.get_variable('accum_g'+str(i), shape=g_grad[i].get_shape(), trainable=False))
+    g_accumulation[i].assign(momentum * g_accumulation[i] + (1.-momentum)*g_grad[i])
+    new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
