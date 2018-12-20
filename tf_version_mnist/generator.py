@@ -4,7 +4,7 @@ import sklearn.svm as svm
 
 class Generator:
     a = 1.
-    alpha = 10
+    alpha = 1.
 
     def __init__(self, initial_x_train=None, initial_y_train=None, x_test=None, y_test=None):
         self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))

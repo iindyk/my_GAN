@@ -101,7 +101,6 @@ with tf.Session() as sess:
         g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
 
         if (epoch + 1) % display_step == 0:
-            print(generator.prob_approx)
             print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
                   " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
 
