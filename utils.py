@@ -22,12 +22,12 @@ class Layer:
         self.n_out = profile['out']
         self.type_ = type_
         if type_ == 'linear':
-            self.params = {'w': np.random.normal(scale=1./np.sqrt(self.n_in/2.), size=(self.n_in, self.n_out)),
-                           'b': np.random.normal(scale=1./np.sqrt(self.n_in/2.), size=self.n_out)}
+            self.params = {'w': np.random.normal(scale=1. / np.sqrt(self.n_in / 2.), size=(self.n_in, self.n_out)),
+                           'b': np.random.normal(scale=1. / np.sqrt(self.n_in / 2.), size=self.n_out)}
 
     def act(self, x):
         if self.type_ == 'linear':
-            return x @ self.params['w']+self.params['b']
+            return x @ self.params['w'] + self.params['b']
         elif self.type_ == 'arctan':
             return np.arctan(x)
         elif self.type_ == 'ReLu':
@@ -35,7 +35,7 @@ class Layer:
         elif self.type_ == 'tanh':
             return np.tanh(x)
         elif self.type_ == 'sigmoid':
-            return np.exp(x)/(np.exp(x)+1.)
+            return np.exp(x) / (np.exp(x) + 1.)
 
     def gradient(self, x, var='x'):
         assert np.ndim(x) == 1
@@ -53,16 +53,16 @@ class Layer:
                 raise Exception('var for a gradient is not recognized')
         elif self.type_ == 'arctan':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return np.diag(1./(1.+x**2))
+            return np.diag(1. / (1. + x ** 2))
         elif self.type_ == 'ReLu':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return np.diag(1.*(x > 0))
+            return np.diag(1. * (x > 0))
         elif self.type_ == 'tanh':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return np.diag(1.-np.tanh(x)**2)
+            return np.diag(1. - np.tanh(x) ** 2)
         elif self.type_ == 'sigmoid':
             if var != 'x': raise Exception('var for a non-linear layer is not recognized')
-            return np.diag(1./(1.+np.exp(-x))-1./(1.+np.exp(-x))**2)
+            return np.diag(1. / (1. + np.exp(-x)) - 1. / (1. + np.exp(-x)) ** 2)
 
     @staticmethod
     def layers_act(layers, x):
@@ -112,15 +112,15 @@ class Layer:
         n, m = np.shape(x)
         n_layers = len(layers)
         # find grad for each input. Output must be a number!!!
-        assert layers[n_layers-1].n_out == 1
+        assert layers[n_layers - 1].n_out == 1
         # gradient with respect to x: (n, n_in)
         # gradient with respect to w: (n, w_in, w_out)
         # gradient with respect to b: (n, w_out)
 
         # initial gradient
-        last_grad = np.zeros(shape=(n, layers[n_layers-1].n_in, layers[n_layers-1].n_in))
+        last_grad = np.zeros(shape=(n, layers[n_layers - 1].n_in, layers[n_layers - 1].n_in))
         for i in range(n):
-            last_grad[i, :, :] = np.identity(layers[n_layers-1].n_in)
+            last_grad[i, :, :] = np.identity(layers[n_layers - 1].n_in)
         grad = {n_layers: {'x': last_grad}}
 
         for layer_id in reversed(range(n_layers)):
@@ -130,15 +130,16 @@ class Layer:
                 grad_b = np.zeros(shape=(n, layers[layer_id].n_out))
                 for i in range(n):
                     trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
-                    grad_x[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
-                    grad_w[i, :, :] = np.reshape(grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='w'),
-                                                 (layers[layer_id].n_in, layers[layer_id].n_out))
-                    grad_b[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
+                    grad_x[i, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    grad_w[i, :, :] = np.reshape(
+                        grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='w'),
+                        (layers[layer_id].n_in, layers[layer_id].n_out))
+                    grad_b[i, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
                 grad[layer_id] = {'w': grad_w, 'b': grad_b, 'x': grad_x}
             else:
                 for i in range(n):
                     trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
-                    grad_x[i, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    grad_x[i, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
                 grad[layer_id] = {'x': grad_x}
         return grad
 
@@ -148,15 +149,15 @@ class Layer:
         n, m = np.shape(x)
         n_layers = len(layers)
         # find grad for each input.
-        n_out = layers[n_layers-1].n_out
+        n_out = layers[n_layers - 1].n_out
         # gradient with respect to x: (n, n_out n_in)
         # gradient with respect to w: (n, n_out, w_in, w_out)
         # gradient with respect to b: (n, n_out, w_out)
 
         # initial gradient
-        last_grad = np.zeros(shape=(n, layers[n_layers-1].n_in, layers[n_layers-1].n_in))
+        last_grad = np.zeros(shape=(n, layers[n_layers - 1].n_in, layers[n_layers - 1].n_in))
         for i in range(n):
-            last_grad[i, :, :] = np.identity(layers[n_layers-1].n_in)
+            last_grad[i, :, :] = np.identity(layers[n_layers - 1].n_in)
         grad = {n_layers: {'x': last_grad}}
 
         for layer_id in reversed(range(n_layers)):
@@ -166,23 +167,24 @@ class Layer:
                 grad_b = np.zeros(shape=(n, n_out, layers[layer_id].n_out))
                 for i in range(n):
                     trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
-                    grad_x[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    grad_x[i, :, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
                     for j in range(n_out):
-                        grad_w[i, j, :, :] = np.reshape(grad[layer_id+1]['x'][i, j, :] @ layers[layer_id].gradient(trunc_act, var='w'),
-                                                 (layers[layer_id].n_in, layers[layer_id].n_out))
-                    grad_b[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
+                        grad_w[i, j, :, :] = np.reshape(
+                            grad[layer_id + 1]['x'][i, j, :] @ layers[layer_id].gradient(trunc_act, var='w'),
+                            (layers[layer_id].n_in, layers[layer_id].n_out))
+                    grad_b[i, :, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='b')
                 grad[layer_id] = {'w': grad_w, 'b': grad_b, 'x': grad_x}
             else:
                 for i in range(n):
                     trunc_act = Layer.layers_act(layers[:layer_id], x[i, :])
-                    grad_x[i, :, :] = grad[layer_id+1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
+                    grad_x[i, :, :] = grad[layer_id + 1]['x'][i, :] @ layers[layer_id].gradient(trunc_act, var='x')
                 grad[layer_id] = {'x': grad_x}
         return grad
 
 
 def conv2d(x, W):
-  return tf.nn.conv2d(input=x, filter=W, strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.conv2d(input=x, filter=W, strides=[1, 1, 1, 1], padding='SAME')
 
 
 def avg_pool_2x2(x):
-  return tf.nn.avg_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    return tf.nn.avg_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')

@@ -38,7 +38,7 @@ d_g = discriminator.act(g_z, reuse=True)
 
 # generator and discriminator losses
 # ensure forward compatibility: function needs to have logits and labels args explicitly used
-g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.ones_like(d_g)))
+g_loss_p1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.ones_like(d_g)))
 d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_x, labels=tf.ones_like(d_x)))
 d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.zeros_like(d_g)))
 d_loss = d_loss_real + d_loss_fake
@@ -53,7 +53,10 @@ n_g_vars = len(g_vars)
 
 # get discriminator and generator gradients lists
 d_grad = tf.gradients(xs=d_vars, ys=d_loss)
-g_grad = tf.gradients(xs=g_vars, ys=g_loss)
+g_grad_p1 = tf.gradients(xs=g_vars, ys=g_loss_p1)
+
+g_z_grad = tf.gradients(xs=g_vars, ys=g_z)
+g_grad_p2 = tf.py_func(generator.adv_obj_and_grad, [tf.placeholder(tf.float32, [batch_size, z_dim])], tf.float32)
 
 # gradient descent step description
 new_d_vars = []
@@ -66,8 +69,9 @@ for i in range(n_d_vars):
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
 for i in range(n_g_vars):
-    g_accumulation.append(tf.get_variable('accum_g'+str(i), shape=g_grad[i].get_shape(), trainable=False))
-    g_accumulation[i].assign(momentum * g_accumulation[i] + (1.-momentum)*g_grad[i])
+    g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
+    g_accumulation[i].assign(momentum * g_accumulation[i] +
+                             (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad))
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
@@ -84,16 +88,15 @@ with tf.Session() as sess:
         real_image_batch = np.reshape(x_train[np.random.randint(n, size=batch_size)], [batch_size, 28, 28, 1])
 
         # make gradient descent step
-        _, _, g_loss_val, d_loss_val = sess.run([new_d_vars, new_g_vars, g_loss, d_loss],
-                                                feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch})
+        _, _, g_loss_p1_val, d_loss_val = sess.run([new_d_vars, new_g_vars, g_loss_p1, d_loss],
+                                                   feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch})
         # memorize losses for graphing
         d_losses.append(d_loss_val)
-        g_losses.append(g_loss_val)
+        g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
 
         if (epoch + 1) % display_step == 0:
             print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
-                  " generator loss=", "{:.9f}".format(g_loss_val))
-
+                  " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
 
     # Let's now see what a sample image looks like after training.
 
