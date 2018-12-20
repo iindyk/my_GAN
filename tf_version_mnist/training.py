@@ -4,9 +4,9 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
-nit = 10000
-display_step = 200
-learning_rate = 0.001
+nit = 1000
+display_step = 10
+learning_rate = 0.01
 momentum = 0.5
 z_dim = 100
 batch_size = 32
@@ -14,10 +14,16 @@ batch_size = 32
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 
 x_train = []
+y_train = []
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] in [1, 7]:
+    if y_train_all[i] == 1:
         x_train.append(x_train_all[i])
+        y_train.append(1.)
+    elif y_train_all[i] == 7:
+        x_train.append(x_train_all[i])
+        y_train.append(-1.)
+
 x_train = np.array(x_train)
 n = len(x_train)
 
@@ -27,7 +33,7 @@ x_placeholder = tf.placeholder("float", shape=[None, 28, 28, 1])
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator()
-generator = Generator()
+generator = Generator(initial_x_train=x_train, initial_y_train=y_train, x_test=x_train, y_test=y_train)
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
 d_x = discriminator.act(x_placeholder)
@@ -56,7 +62,7 @@ d_grad = tf.gradients(xs=d_vars, ys=d_loss)
 g_grad_p1 = tf.gradients(xs=g_vars, ys=g_loss_p1)
 
 g_z_grad = tf.gradients(xs=g_vars, ys=g_z)
-g_grad_p2 = tf.py_func(generator.adv_obj_and_grad, [tf.placeholder(tf.float32, [batch_size, z_dim])], tf.float32)
+g_grad_p2 = tf.py_func(generator.adv_obj_and_grad, [g_z], tf.float32)
 
 # gradient descent step description
 new_d_vars = []
@@ -71,7 +77,7 @@ for i in range(n_d_vars):
 for i in range(n_g_vars):
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     g_accumulation[i].assign(momentum * g_accumulation[i] +
-                             (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad))
+                             (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad[i]))
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
@@ -88,13 +94,14 @@ with tf.Session() as sess:
         real_image_batch = np.reshape(x_train[np.random.randint(n, size=batch_size)], [batch_size, 28, 28, 1])
 
         # make gradient descent step
-        _, _, g_loss_p1_val, d_loss_val = sess.run([new_d_vars, new_g_vars, g_loss_p1, d_loss],
-                                                   feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch})
+        _, _, g_loss_p1_val, d_loss_val, _ = sess.run([new_d_vars, new_g_vars, g_loss_p1, d_loss, g_grad_p2],
+                                                      feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch})
         # memorize losses for graphing
         d_losses.append(d_loss_val)
         g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
 
         if (epoch + 1) % display_step == 0:
+            print(generator.prob_approx)
             print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
                   " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
 

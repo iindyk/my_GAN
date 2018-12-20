@@ -4,12 +4,12 @@ import sklearn.svm as svm
 
 class Generator:
     a = 1.
-    alpha = 0.5
+    alpha = 10
 
     def __init__(self, initial_x_train=None, initial_y_train=None, x_test=None, y_test=None):
-        self.initial_x_train = initial_x_train
+        self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
         self.initial_y_train = initial_y_train
-        self.x_test = x_test
+        self.x_test = np.reshape(x_test, newshape=(len(initial_y_train), 784))
         self.y_test = y_test
         self.prob_approx = 0.
 
@@ -74,11 +74,12 @@ class Generator:
         return h_conv4
 
     def adv_obj_and_grad(self, d_generated):
-        n_gen, m_gen = np.shape(d_generated)
+        d_gen = np.reshape(d_generated, newshape=(len(d_generated), 784))
+        n_gen, m_gen = np.shape(d_gen)
         n_t = len(self.y_test)
 
         # returns the test prediction accuracy and its gradient w.r.t. poisoning data
-        d_union = np.append(d_generated, self.initial_x_train, axis=0)
+        d_union = np.append(d_gen, self.initial_x_train, axis=0)
         l_generated = np.array([-1.] * n_gen)  # todo: how to generate labels?
         l_union = np.append(l_generated, self.initial_y_train)
 
@@ -125,6 +126,6 @@ class Generator:
                 for i in range(n_gen):
                     obj_grad_val[i, :] += (np.multiply(dw_dh[i, :], self.x_test[k, :]) + db_dh[i, :]) * bin_
 
-        self.prob_approx = cost
-        return obj_grad_val
+        self.prob_approx = cost/n_t
+        return np.reshape(np.float32(obj_grad_val), newshape=np.shape(d_generated))
 
