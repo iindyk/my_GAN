@@ -2,15 +2,14 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from PIL import Image
 
 
-nit = 10000
+nit = 5000
 kit_discriminator = 1
-display_step = 100
-save_image_step = 500
-learning_rate = 0.01
-momentum = 0.5
+display_step = 500
+save_image_step = 1000
+learning_rate = 0.02
+momentum = 0.3
 z_dim = 100
 batch_size = 32
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -21,10 +20,10 @@ x_train = []
 y_train = []
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] == 1:
+    if y_train_all[i] == 7:
         x_train.append(x_train_all[i])
         y_train.append(1.)
-    elif y_train_all[i] == 7:
+    elif y_train_all[i] == 1:
         x_train.append(x_train_all[i])
         y_train.append(-1.)
 
@@ -117,9 +116,10 @@ with tf.Session() as sess:
         if (epoch + 1) % save_image_step == 0:
             sample_image = generator.act(z_placeholder, 1, z_dim, reuse=True)
             z_batch = np.random.normal(0., 1., size=[1, z_dim])
-            temp = (sess.run(sample_image, feed_dict={z_placeholder: z_batch}))
-            img = Image.fromarray(temp.squeeze()).convert("L")
-            img.save('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg')
+            temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch})
+            img_array = temp.squeeze()
+            plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
+                       img_array, cmap='gray_r')
 
     # Let's now see what a sample image looks like after training.
 
