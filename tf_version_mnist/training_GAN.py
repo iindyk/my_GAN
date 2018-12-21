@@ -2,13 +2,15 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from PIL import Image
 
 
-nit = 1000
+nit = 10000
 kit_discriminator = 1
-display_step = 10
-learning_rate = 0.001
-momentum = 0.2
+display_step = 100
+save_image_step = 500
+learning_rate = 0.01
+momentum = 0.5
 z_dim = 100
 batch_size = 32
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -47,9 +49,9 @@ d_g = discriminator.act(g_z, reuse=True)
 
 # generator and discriminator losses
 # ensure forward compatibility: function needs to have logits and labels args explicitly used
-g_loss_p1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.random.uniform(shape=d_g.get_shape(), minval=.7, maxval=1.3)))
-d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_x, labels=tf.random.uniform(shape=d_x.get_shape(), minval=.7, maxval=1.3)))
-d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.random.uniform(shape=d_g.get_shape(), minval=.0, maxval=.3)))
+g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.ones_like(d_g)))
+d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_x, labels=tf.ones_like(d_x)))
+d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_g, labels=tf.zeros_like(d_g)))
 d_loss = d_loss_real + d_loss_fake
 
 # get discriminator and generator variables lists
@@ -62,25 +64,23 @@ n_g_vars = len(g_vars)
 
 # get discriminator and generator gradients lists
 d_grad = tf.gradients(xs=d_vars, ys=d_loss)
-g_grad_p1 = tf.gradients(xs=g_vars, ys=g_loss_p1)
-
-g_z_grad = tf.gradients(xs=g_vars, ys=g_z)
-g_grad_p2 = tf.py_func(generator.adv_obj_and_grad, [g_z], tf.float32)
+g_grad = tf.gradients(xs=g_vars, ys=g_loss)
 
 # gradient descent step description
 new_d_vars = []
 new_g_vars = []
 d_accumulation = []
+new_d_accumulation = []
 g_accumulation = []
+new_g_accumulation = []
 for i in range(n_d_vars):
     d_accumulation.append(tf.get_variable('accum_d'+str(i), shape=d_grad[i].get_shape(), trainable=False))
-    d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i])
+    new_d_accumulation.append(d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i]))
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
 for i in range(n_g_vars):
-    g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
-    g_accumulation[i].assign(momentum * g_accumulation[i] +
-                             (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad[i]))
+    g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad[i].get_shape(), trainable=False))
+    new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] + (1.-momentum) * g_grad[i]))
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
@@ -99,33 +99,40 @@ with tf.Session() as sess:
             real_image_batch = np.reshape(x_train[np.random.randint(n, size=batch_size)], [batch_size, 28, 28, 1])
 
             # make gradient descent step for discriminator
-            _, d_loss_val = sess.run([new_d_vars, d_loss], feed_dict={z_placeholder: z_batch,
-                                                                      x_placeholder: real_image_batch})
+            _, _, d_loss_val = sess.run([new_d_vars, new_d_accumulation, d_loss],
+                                        feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch})
 
         z_batch = np.random.normal(0., 1., size=[batch_size, z_dim])
         # make gradient descent step for generator
-        _, g_loss_p1_val, _ = sess.run([new_g_vars, g_loss_p1, g_grad_p2], feed_dict={z_placeholder: z_batch})
+        _, _, g_loss_val = sess.run([new_g_vars, new_g_accumulation, g_loss], feed_dict={z_placeholder: z_batch})
 
         # memorize losses for graphing
         d_losses.append(d_loss_val)
-        g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
+        g_losses.append(g_loss_val)
 
         if (epoch + 1) % display_step == 0:
             print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
-                  " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
+                  " generator loss=", "{:.9f}".format(g_loss_val))
+
+        if (epoch + 1) % save_image_step == 0:
+            sample_image = generator.act(z_placeholder, 1, z_dim, reuse=True)
+            z_batch = np.random.normal(0., 1., size=[1, z_dim])
+            temp = (sess.run(sample_image, feed_dict={z_placeholder: z_batch}))
+            img = Image.fromarray(temp.squeeze()).convert("L")
+            img.save('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg')
 
     # Let's now see what a sample image looks like after training.
 
-    sample_image = generator.act(z_placeholder, 1, z_dim, reuse=True)
+    '''sample_image = generator.act(z_placeholder, 1, z_dim, reuse=True)
     z_batch_1 = np.random.uniform(-1, 1, size=[1, z_dim])
     temp = (sess.run(sample_image, feed_dict={z_placeholder: z_batch_1}))
     my_i_1 = temp.squeeze()
-    plt.imshow(my_i_1, cmap='gray_r')
+    plt.imshow(my_i_1, cmap='gray_r')'''
 
-    '''_, ax = plt.subplots()
-    iter = np.arange(nit)
-    ax.plot(iter, g_losses, '-', label='generator loss')
-    ax.plot(iter, d_losses, '-', label='discriminator loss')
-    plt.legend(loc='lower right')'''
+    _, ax = plt.subplots()
+    iter_arr = np.arange(nit)
+    ax.plot(iter_arr, g_losses, '-', label='generator loss')
+    ax.plot(iter_arr, d_losses, '-', label='discriminator loss')
+    plt.legend(loc='lower right')
 
     plt.show()

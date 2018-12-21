@@ -9,7 +9,7 @@ class Generator:
     def __init__(self, initial_x_train=None, initial_y_train=None, x_test=None, y_test=None):
         self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
         self.initial_y_train = initial_y_train
-        self.x_test = np.reshape(x_test, newshape=(len(initial_y_train), 784))
+        self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
         self.y_test = y_test
         self.prob_approx = 0.
 
@@ -25,7 +25,7 @@ class Generator:
             # make that change gradual.
 
             h0 = tf.reshape(z, [batch_size, s16 + 1, s16 + 1, 25])
-            h0 = tf.nn.relu(h0)
+            h0 = tf.nn.leaky_relu(h0)
             # Dimensions of h0 = batch_size x 2 x 2 x 25
 
             # First DeConv Layer
@@ -36,7 +36,7 @@ class Generator:
             h_conv1 = tf.nn.conv2d_transpose(h0, w_conv1, output_shape=output1_shape,
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv1
             h_conv1 = tf.contrib.layers.batch_norm(inputs=h_conv1, center=True, scale=True, is_training=True, scope="g_bn1")
-            h_conv1 = tf.nn.relu(h_conv1)
+            h_conv1 = tf.nn.leaky_relu(h_conv1)
             # Dimensions of h_conv1 = batch_size x 3 x 3 x 256
 
             # Second DeConv Layer
@@ -47,7 +47,7 @@ class Generator:
             h_conv2 = tf.nn.conv2d_transpose(h_conv1, w_conv2, output_shape=output2_shape,
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv2
             h_conv2 = tf.contrib.layers.batch_norm(inputs=h_conv2, center=True, scale=True, is_training=True, scope="g_bn2")
-            h_conv2 = tf.nn.relu(h_conv2)
+            h_conv2 = tf.nn.leaky_relu(h_conv2)
             # Dimensions of h_conv2 = batch_size x 6 x 6 x 128
 
             # Third DeConv Layer
@@ -58,7 +58,7 @@ class Generator:
             h_conv3 = tf.nn.conv2d_transpose(h_conv2, w_conv3, output_shape=output3_shape,
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv3
             h_conv3 = tf.contrib.layers.batch_norm(inputs=h_conv3, center=True, scale=True, is_training=True, scope="g_bn3")
-            h_conv3 = tf.nn.relu(h_conv3)
+            h_conv3 = tf.nn.leaky_relu(h_conv3)
             # Dimensions of h_conv3 = batch_size x 12 x 12 x 64
 
             # Fourth DeConv Layer
