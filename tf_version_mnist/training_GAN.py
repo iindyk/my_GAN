@@ -2,9 +2,10 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import datetime as dt
 
 
-nit = 5000
+nit = 20000
 kit_discriminator = 1
 display_step = 500
 save_image_step = 1000
@@ -12,6 +13,8 @@ learning_rate = 0.02
 momentum = 0.3
 z_dim = 100
 batch_size = 32
+save_model = True
+
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
@@ -85,6 +88,9 @@ for i in range(n_g_vars):
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
 
+# Add ops to save and restore all the variables.
+saver = tf.train.Saver()
+
 # run simultaneous gradient descent
 with tf.Session() as sess:
     sess.run(init)
@@ -120,19 +126,17 @@ with tf.Session() as sess:
             img_array = temp.squeeze()
             plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
                        img_array, cmap='gray_r')
+    if save_model:
+        # Save the variables to disk
+        time = dt.datetime.now().strftime("%m-%d-%H:%M")
+        save_path = saver.save(sess, '/home/iindyk/PycharmProjects/my_GAN/saved_models/model'+time+'.ckpt')
+        print("Model saved in path: %s" % save_path)
 
-    # Let's now see what a sample image looks like after training.
+# show optimization progress
+_, ax = plt.subplots()
+iter_arr = np.arange(nit)
+ax.plot(iter_arr, g_losses, '-', label='generator loss')
+ax.plot(iter_arr, d_losses, '-', label='discriminator loss')
+plt.legend(loc='lower right')
 
-    '''sample_image = generator.act(z_placeholder, 1, z_dim, reuse=True)
-    z_batch_1 = np.random.uniform(-1, 1, size=[1, z_dim])
-    temp = (sess.run(sample_image, feed_dict={z_placeholder: z_batch_1}))
-    my_i_1 = temp.squeeze()
-    plt.imshow(my_i_1, cmap='gray_r')'''
-
-    _, ax = plt.subplots()
-    iter_arr = np.arange(nit)
-    ax.plot(iter_arr, g_losses, '-', label='generator loss')
-    ax.plot(iter_arr, d_losses, '-', label='discriminator loss')
-    plt.legend(loc='lower right')
-
-    plt.show()
+plt.show()
