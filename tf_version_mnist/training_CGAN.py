@@ -6,12 +6,12 @@ import datetime as dt
 import os
 
 
-nit = 20000
+nit = 10000
 kit_discriminator = 1
 display_step = 500
 save_image_step = 500
 learning_rate = 0.02
-momentum = 0.5
+momentum = 0.3
 z_dim = 100
 batch_size = 64
 save_model = True
@@ -133,9 +133,13 @@ with tf.Session() as sess:
             plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
                        img_array, cmap='gray_r')
     if save_model:
-        # Save model to file
+        # Save model
         time = dt.datetime.now().strftime("%m-%d_%H:%M")
         os.mkdir(save_dir + time)
+        config_file = open(save_dir+time+'/config.txt', 'w+')
+        config_file.write('nit='+str(nit)+'\nkit_discriminator='+str(kit_discriminator)+'\nlearning rate='+str(learning_rate)+
+                          '\nmomentum='+str(momentum)+'\nz_dim='+str(z_dim)+'\nbatch size='+str(batch_size))
+        config_file.close()
         os.mkdir(save_dir + time + '/generated_images')
         save_path = saver.save(sess, save_dir+time+'/model.ckpt')
         print("Model saved in path: %s" % save_path)
