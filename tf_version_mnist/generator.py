@@ -132,14 +132,22 @@ class Generator0:
 
 
 class Generator1:
-    def __init__(self, batch_size, y_dim, output_size, channel):
+    def __init__(self, batch_size, y_dim, output_size, channel,
+                 initial_x_train=None, initial_y_train=None, x_test=None, y_test=None):
         self.batch_size = batch_size
         self.y_dim = y_dim
         self.output_size = output_size
         self.channel = channel
+        self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
+        self.initial_y_train = initial_y_train
+        self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
+        self.y_test = y_test
+        self.prob_approx = 0.
 
-    def act(self, z, y):
+    def act(self, z, y, reuse=False):
         with tf.variable_scope('generator') as scope:
+            if reuse:
+                scope.reuse_variables()
             yb = tf.reshape(y, shape=[self.batch_size, 1, 1, self.y_dim])
             z = tf.concat([z, y], 1)
             c1, c2 = int(self.output_size / 4), int(self.output_size / 2)
