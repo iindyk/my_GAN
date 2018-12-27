@@ -38,8 +38,8 @@ x_placeholder = tf.placeholder("float", shape=[None, 28, 28, 1])
 # placeholder for input noise vectors to the generator
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
-discriminator = Discriminator()
-generator = Generator(initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
+discriminator = Discriminator0()
+generator = Generator0(initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
                       x_test=x_train[:1000, :, :], y_test=y_train[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
@@ -127,7 +127,7 @@ with tf.Session() as sess:
             plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
                        img_array, cmap='gray_r')
     if save_model:
-        # Save the variables to disk
+        # Save model to file
         time = dt.datetime.now().strftime("%m-%d-%H:%M")
         save_path = saver.save(sess, '/home/iindyk/PycharmProjects/my_GAN/saved_models/model'+time+'.ckpt')
         print("Model saved in path: %s" % save_path)
