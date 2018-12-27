@@ -3,6 +3,7 @@ from tf_version_mnist.generator import *
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import datetime as dt
+import os
 
 
 nit = 10000
@@ -14,6 +15,7 @@ momentum = 0.3
 z_dim = 100
 batch_size = 64
 save_model = True
+save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/'
 y_dim = 2
 channel = 1     # todo
 
@@ -125,15 +127,17 @@ with tf.Session() as sess:
                   " generator loss=", "{:.9f}".format(g_loss_val))
 
         if (epoch + 1) % save_image_step == 0:
-            sample_image = generator.act(z_placeholder, real_labels_batch, reuse=True)
-            temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch})
+            sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
+            temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
             img_array = temp[0, :, :, 0]
             plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
                        img_array, cmap='gray_r')
     if save_model:
         # Save model to file
         time = dt.datetime.now().strftime("%m-%d-%H:%M")
-        save_path = saver.save(sess, '/home/iindyk/PycharmProjects/my_GAN/saved_models/model'+time+'.ckpt')
+        os.mkdir(save_dir + time)
+        os.mkdir(save_dir + time + '/generated_images')
+        save_path = saver.save(sess, save_dir+time+'/model.ckpt')
         print("Model saved in path: %s" % save_path)
 
 
