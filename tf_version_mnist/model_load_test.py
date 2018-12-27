@@ -10,9 +10,9 @@ batch_size = 64
 generate_batches = 1
 y_dim = 2
 channel = 1
-model_to_load = ''
-model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models/' + model_to_load + '/model.ckpt'
-generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models/' + model_to_load + '/generated_images'
+model_to_load = '12-27_15:49'
+model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
+generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/generated_images'
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
@@ -61,4 +61,6 @@ with tf.Session() as sess:
         temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: y_batch})
         for j in range(batch_size):
             img_array = temp[j, :, :, 0]
-            plt.imsave(generated_images_path + '/batch' + str(i) + 'im' + str(j) + '.jpeg', img_array, cmap='gray_r')
+            label = '7' if y_batch[j, 0] == 1. else '1'
+            plt.imsave(generated_images_path + '/' + label + '_batch' + str(i) + 'im' + str(j) + '.jpeg', img_array,
+                       cmap='gray_r')

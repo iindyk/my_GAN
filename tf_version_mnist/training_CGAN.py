@@ -6,12 +6,12 @@ import datetime as dt
 import os
 
 
-nit = 10000
+nit = 20000
 kit_discriminator = 1
 display_step = 500
 save_image_step = 500
 learning_rate = 0.02
-momentum = 0.3
+momentum = 0.5
 z_dim = 100
 batch_size = 64
 save_model = True
@@ -134,7 +134,7 @@ with tf.Session() as sess:
                        img_array, cmap='gray_r')
     if save_model:
         # Save model to file
-        time = dt.datetime.now().strftime("%m-%d-%H:%M")
+        time = dt.datetime.now().strftime("%m-%d_%H:%M")
         os.mkdir(save_dir + time)
         os.mkdir(save_dir + time + '/generated_images')
         save_path = saver.save(sess, save_dir+time+'/model.ckpt')
