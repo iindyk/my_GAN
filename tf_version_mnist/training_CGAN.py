@@ -9,9 +9,9 @@ import os
 nit = 10000
 kit_discriminator = 1
 display_step = 500
-save_image_step = 500
+save_image_step = 1000
 learning_rate = 0.02
-momentum = 0.3
+momentum = 0.2
 z_dim = 100
 batch_size = 64
 save_model = True
@@ -104,7 +104,8 @@ with tf.Session() as sess:
     g_losses = []
     for epoch in range(nit):
         # sample noise and real data
-        z_batch = np.random.normal(0., 1., size=[batch_size, z_dim])
+        #z_batch = np.random.normal(0., 1., size=[batch_size, z_dim])
+        z_batch = np.random.uniform(-1, 1, size=[batch_size, z_dim])
         perm = np.random.randint(n, size=batch_size)
         real_image_batch = np.reshape(x_train[perm], [batch_size, 28, 28, 1])
         real_labels_batch = y_train[perm]
