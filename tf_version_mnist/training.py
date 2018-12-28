@@ -92,7 +92,7 @@ for i in range(n_d_vars):
 for i in range(n_g_vars):
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] +
-                              (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad[i])))
+                              (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad[i])))    # todo: check shapes
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)

@@ -139,9 +139,9 @@ class Generator1:
         self.output_size = output_size
         self.channel = channel
         self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
-        self.initial_y_train = initial_y_train
+        self.initial_y_train = [(1. if initial_y_train[j, 0] == 1. else -1.) for j in range(len(initial_y_train))]
         self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
-        self.y_test = y_test
+        self.y_test = [(1. if y_test[j, 0] == 1. else -1.) for j in range(len(y_test))]
         self.prob_approx = 0.
         self.a = 1.
         self.alpha = 1.
@@ -182,7 +182,8 @@ class Generator1:
 
         # returns the test prediction accuracy and its gradient w.r.t. poisoning data
         d_union = np.append(d_gen, self.initial_x_train, axis=0)
-        l_union = np.append(labels, self.initial_y_train)
+        l_generated = [(1. if labels[j, 0] == 1. else -1.) for j in range(n_gen)]
+        l_union = np.append(l_generated, self.initial_y_train)
 
         # get parameters of SVM
         svc = svm.SVC(kernel='linear', C=self.a).fit(d_union, l_union)
