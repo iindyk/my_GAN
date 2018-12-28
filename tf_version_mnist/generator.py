@@ -143,6 +143,8 @@ class Generator1:
         self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
         self.y_test = y_test
         self.prob_approx = 0.
+        self.a = 1.
+        self.alpha = 1.
 
     def act(self, z, y, reuse=False):
         with tf.variable_scope('generator') as scope:
@@ -172,4 +174,59 @@ class Generator1:
                          name='gen_deconv2', initializer=xavier_initializer())
 
             return tf.nn.sigmoid(d4)
+
+    def adv_obj_and_grad(self, d_generated, labels):
+        d_gen = np.reshape(d_generated, newshape=(len(d_generated), 784))
+        n_gen, m_gen = np.shape(d_gen)
+        n_t = len(self.y_test)
+
+        # returns the test prediction accuracy and its gradient w.r.t. poisoning data
+        d_union = np.append(d_gen, self.initial_x_train, axis=0)
+        l_union = np.append(labels, self.initial_y_train)
+
+        # get parameters of SVM
+        svc = svm.SVC(kernel='linear', C=self.a).fit(d_union, l_union)
+        w = svc.coef_[0]  # normal vector
+        b = svc.intercept_[0]  # intercept
+
+        # calculate approximation to the probability of misclassification
+        prob_approx = 0
+        n_test = len(self.y_test)
+        for i in range(n_test):
+            prob_approx += max(self.y_test[i] * (w.dot(self.x_test[i]) + b), -1)
+        prob_approx /= n_test
+
+        # construct extended dual variables vector
+        n_union = len(l_union)
+        l_ext = np.zeros(n_union)
+        tmp_i = 0
+        for i in range(n_union):
+            if i in svc.support_:
+                l_ext[i] = svc.dual_coef_[0, tmp_i] * l_union[i]
+                tmp_i += 1
+        l = l_ext[:n_gen]
+
+        # get approximate gradient of w
+        dw_dh = np.array([[l[i] * l_union[i] for j in range(m_gen)] for i in range(n_gen)])
+
+        # get approximate gradient of b
+        # 1: find point on the margin's boundary
+        idx = 0
+        for i in range(n_gen):
+            if 0.001 < l[i] < 0.999:
+                idx = i
+                break
+        db_dh = np.array([np.multiply(dw_dh[j, :], d_union[idx]) for j in range(n_gen)])
+        cost = 0.
+
+        obj_grad_val = np.zeros(shape=(n_gen, m_gen))
+        for k in range(n_t):
+            bin_ = self.y_test[k]/n_t if self.y_test[k] * (np.dot(w, self.x_test[k]) + b) > -1 else 0.0
+            cost += max(self.y_test[k] * (np.dot(w, self.x_test[k]) + b), -1)
+            if bin_ != 0:
+                for i in range(n_gen):
+                    obj_grad_val[i, :] += (np.multiply(dw_dh[i, :], self.x_test[k, :]) + db_dh[i, :]) * bin_
+
+        self.prob_approx = cost/n_t
+        return np.reshape(np.float32(obj_grad_val), newshape=np.shape(d_generated))
 

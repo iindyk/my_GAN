@@ -9,7 +9,7 @@ batch_size = 64
 generate_batches = 1
 y_dim = 2
 channel = 1
-model_to_load = '12-27_18:15'
+model_to_load = '12-27_19:15'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/generated_images'
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -55,7 +55,6 @@ with tf.Session() as sess:
     print("Model restored.")
     sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
     for i in range(generate_batches):
-        # z_batch = np.random.normal(0., 1., size=[batch_size, z_dim])
         z_batch = np.random.uniform(-1, 1, size=[batch_size, z_dim])
         y_batch = y_train[np.random.randint(n, size=batch_size)]
         temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: y_batch})
