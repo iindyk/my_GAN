@@ -151,11 +151,11 @@ class Generator1:
             if reuse:
                 scope.reuse_variables()
             yb = tf.reshape(y, shape=[self.batch_size, 1, 1, self.y_dim])
-            z = tf.concat([z, y], 1)
+            _z = tf.concat([z, y], 1)
             c1, c2 = int(self.output_size / 4), int(self.output_size / 2)
 
             # 10 stand for the num of labels
-            d1 = tf.nn.relu(batch_normal(fully_connect(z, output_size=1024, scope='gen_fully'), scope='gen_bn1'))
+            d1 = tf.nn.relu(batch_normal(fully_connect(_z, output_size=1024, scope='gen_fully'), scope='gen_bn1'))
 
             d1 = tf.concat([d1, y], 1)
 

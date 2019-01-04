@@ -74,8 +74,7 @@ n_g_vars = len(g_vars)
 d_grad = tf.gradients(xs=d_vars, ys=d_loss)
 g_grad_p1 = tf.gradients(xs=g_vars, ys=g_loss_p1)
 
-g_z_grad = tf.gradients(xs=g_vars, ys=g_z)
-g_grad_p2 = tf.py_func(generator.adv_obj_and_grad, [g_z, y_placeholder], tf.float32)
+g_grad_p2_1 = tf.py_func(generator.adv_obj_and_grad, [g_z, y_placeholder], tf.float32)
 
 # gradient descent step description
 new_d_vars = []
@@ -89,10 +88,12 @@ for i in range(n_d_vars):
     new_d_accumulation.append(d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i]))
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
+g_grad_p2 = []
 for i in range(n_g_vars):
+    g_grad_p2.append(tf.reduce_sum([g_grad_p2_1[j%28, j//28, 0]*tf.gradients(xs=g_vars[i], ys=g_z[j%28, j//28, 0])for j in range(784)], axis=0))
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] +
-                              (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2*g_z_grad[i])))    # todo: check shapes
+                              (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2[i])))    # todo: check shapes
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
