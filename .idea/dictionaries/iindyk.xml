@@ -2,6 +2,7 @@
   <dictionary name="iindyk">
     <words>
       <w>arctan</w>
+      <w>jacobian</w>
       <w>misclassification</w>
       <w>tanh</w>
     </words>

@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import batch_norm, variance_scaling_initializer
 import memory_profiler
+import datetime as dt
 
 
 class Layer:
@@ -255,3 +256,23 @@ def de_conv(input_, output_shape,
             return deconv, w, biases
         else:
             return deconv
+
+
+def jacobian(y, x):
+    with tf.name_scope("jacob"):
+        print(dt.datetime.now().strftime("%m-%d %H:%M"), ': Jacobian construction started')
+        shape = tf.shape(y)
+        jac_list = []
+        y_list = tf.unstack(tf.reshape(y, [-1]))
+        n = len(y_list)
+        tmp_progress = 0
+        for i in range(n):
+            jac_list.append(tf.gradients(y_list[i], x))
+            if tmp_progress > 0.1:
+                print(dt.datetime.now().strftime("%m-%d %H:%M"), ': ', int(100*i/n), '%')
+                tmp_progress = 0
+            tmp_progress += 1./n
+
+        print(dt.datetime.now().strftime("%m-%d %H:%M"), ': Jacobian construction finished!')
+        jac = tf.stack(jac_list)
+        return tf.reshape(jac, shape=tf.concat([shape, len(x)], axis=0))

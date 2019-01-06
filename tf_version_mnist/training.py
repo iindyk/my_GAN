@@ -4,6 +4,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import datetime as dt
 import os
+from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
 
 
 nit = 1000
@@ -13,7 +14,8 @@ save_image_step = 500
 learning_rate = 0.02
 momentum = 0.2
 z_dim = 100
-batch_size = 64
+batch_size = 32
+im_dim = 28
 save_model = True
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2
@@ -39,13 +41,13 @@ y_train = np.array(y_train, dtype=np.float32)
 n = len(x_train)
 
 # placeholder for input images to the discriminator
-x_placeholder = tf.placeholder("float", shape=[batch_size, 28, 28, 1])
+x_placeholder = tf.placeholder("float", shape=[batch_size, im_dim, im_dim, 1])
 y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
 # placeholder for input noise vectors to the generator
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
-generator = Generator1(batch_size, y_dim, 28, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
+generator = Generator1(batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
                        x_test=x_train[:1000, :, :], y_test=y_train[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
@@ -88,19 +90,14 @@ for i in range(n_d_vars):
     new_d_accumulation.append(d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i]))
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
-g_jacob_p2 = []
-for j in range(batch_size):
-    print(j)
-    g_jacob_p2.append([])
-    for k in range(generator.output_size):
-        g_jacob_p2[j].append([])
-        for l in range(generator.output_size):
-            g_jacob_p2[j][k].append(tf.gradients(xs=g_vars, ys=g_z[j, k, l]))
-g_jacob_p2 = tf.convert_to_tensor(g_jacob_p2, dtype=tf.float32)
-g_grad_p2 = []
+g_jacob_p2 = jac(g_z, g_vars)
+g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
 for i in range(n_g_vars):
-    print(i)
-    g_grad_p2.append(tf.matmul(tf.reshape(g_grad_p2_1, [-1]), tf.reshape(g_jacob_p2[:, :, :, i]), transpose_a=True))
+    for j in range(batch_size):
+        for k in range(im_dim):
+            for l in range(im_dim):
+                g_grad_p2[i] += g_grad_p2_1[j, k, l, 0]*g_jacob_p2[i][j, k, l, 0]
+
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] +
                               (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2[i])))
@@ -121,7 +118,7 @@ with tf.Session() as sess:
         # sample noise and real data
         z_batch = np.random.uniform(-1, 1, size=[batch_size, z_dim])
         perm = np.random.randint(n, size=batch_size)
-        real_image_batch = np.reshape(x_train[perm], [batch_size, 28, 28, 1])
+        real_image_batch = np.reshape(x_train[perm], [batch_size, im_dim, im_dim, channel])
         real_labels_batch = y_train[perm]
 
         # make gradient descent step for discriminator
