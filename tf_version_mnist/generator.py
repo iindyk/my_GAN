@@ -158,7 +158,6 @@ class Generator1:
             d1 = tf.nn.relu(batch_normal(fully_connect(_z, output_size=1024, scope='gen_fully'), scope='gen_bn1'))
 
             d1 = tf.concat([d1, y], 1)
-
             d2 = tf.nn.relu(
                 batch_normal(fully_connect(d1, output_size=7 * 7 * 2 * 64, scope='gen_fully2'), scope='gen_bn2'))
 

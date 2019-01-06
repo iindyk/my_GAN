@@ -6,7 +6,7 @@ import datetime as dt
 import os
 
 
-nit = 10000
+nit = 3000
 kit_discriminator = 1
 display_step = 500
 save_image_step = 1000

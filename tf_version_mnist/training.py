@@ -28,6 +28,9 @@ resource.setrlimit(rsrc, ((1024**3)*9, hard))
 soft, hard = resource.getrlimit(rsrc)
 print('Soft RAM limit changed to:', soft/(1024**3), 'GB')
 
+# clearing computation graph
+tf.reset_default_graph()
+
 # uploading data
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
