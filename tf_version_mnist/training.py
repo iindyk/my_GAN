@@ -26,7 +26,7 @@ rsrc = resource.RLIMIT_DATA
 _, hard = resource.getrlimit(rsrc)
 resource.setrlimit(rsrc, ((1024**3)*9, hard))
 soft, hard = resource.getrlimit(rsrc)
-print('Soft limit changed to :', soft/(1024**3), 'GB')
+print('Soft RAM limit changed to:', soft/(1024**3), 'GB')
 
 # uploading data
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -133,14 +133,18 @@ with tf.Session() as sess:
         real_image_batch = np.reshape(x_train[perm], [batch_size, im_dim, im_dim, channel])
         real_labels_batch = y_train[perm]
 
+        # OOM debugging
+        run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
+
         # make gradient descent step for discriminator
         _, _, d_loss_val = sess.run([new_d_vars, new_d_accumulation, d_loss],
                                     feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch,
-                                               y_placeholder: real_labels_batch})
+                                               y_placeholder: real_labels_batch}, options=run_options)
 
         # make gradient descent step for generator
         _, _, g_loss_p1_val = sess.run([new_g_vars, new_g_accumulation, g_loss_p1],
-                                       feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
+                                       feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch},
+                                       options=run_options)
 
         # memorize losses for graphing
         d_losses.append(d_loss_val)
