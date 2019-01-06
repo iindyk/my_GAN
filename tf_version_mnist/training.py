@@ -8,19 +8,18 @@ from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
 import resource
 
 
-nit = 1000
-kit_discriminator = 1
-display_step = 100
-save_image_step = 500
-learning_rate = 0.02
-momentum = 0.2
-z_dim = 100
-batch_size = 4
-im_dim = 28
-save_model = True
+nit = 1000              # number of training iterations
+display_step = 100      # progress display step
+save_image_step = 500   # generated image save step (in save_dir folder)
+learning_rate = 0.02    # gradient descent learning step
+momentum = 0.2          # parameter for momentum learning rule
+z_dim = 100             # generator input dimension
+batch_size = 4          # size of training sample used for training
+im_dim = 28             # one-side dimension of square image
+save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
-y_dim = 2
-channel = 1     # todo
+y_dim = 2               # number of classes used for training
+channel = 1             # number of channels of image (MNIST is grayscale)
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -36,7 +35,7 @@ x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x
 
 x_train = []
 y_train = []
-# take only images of 0 and 9
+# take only images of 7 and 1
 for i in range(len(y_train_all)):
     if y_train_all[i] == 7:
         x_train.append(x_train_all[i])
@@ -52,6 +51,7 @@ n = len(x_train)
 # placeholder for input images to the discriminator
 x_placeholder = tf.placeholder("float", shape=[batch_size, im_dim, im_dim, 1])
 y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
+
 # placeholder for input noise vectors to the generator
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
@@ -100,10 +100,10 @@ for i in range(n_d_vars):
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
 g_jacob_p2 = jac(g_z, g_vars)
-#g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
+# g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
 g_grad_p2 = []
 for i in range(n_g_vars):
-    #for j in range(batch_size):
+    # for j in range(batch_size):
     #   for k in range(im_dim):
     #        for l in range(im_dim):
     #           g_grad_p2[i] += g_grad_p2_1[j, k, l, 0]*g_jacob_p2[i][j, k, l, 0]
@@ -113,11 +113,11 @@ for i in range(n_g_vars):
                               (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2[i])))
     new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
-# Initialize the variables (i.e. assign their default value)
+# initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
 print(dt.datetime.now().strftime("%H:%M"), ' Initialization completed.')
 
-# Add ops to save and restore all the variables.
+# add ops to save and restore all the variables.
 saver = tf.train.Saver()
 
 # run simultaneous gradient descent
@@ -161,7 +161,7 @@ with tf.Session() as sess:
         time = dt.datetime.now().strftime("%m-%d_%H:%M")
         os.mkdir(save_dir + time)
         config_file = open(save_dir+time+'/config.txt', 'w+')
-        config_file.write('nit='+str(nit)+'\nkit_discriminator='+str(kit_discriminator)+'\nlearning rate='+str(learning_rate)+
+        config_file.write('nit='+str(nit)+'\nlearning rate='+str(learning_rate)+
                           '\nmomentum='+str(momentum)+'\nz_dim='+str(z_dim)+'\nbatch size='+str(batch_size) +
                           '\ngenerator alpha='+str(generator.alpha)+'\ngenerator a='+str(generator.a))
         config_file.close()
