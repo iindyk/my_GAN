@@ -14,7 +14,7 @@ save_image_step = 500
 learning_rate = 0.02
 momentum = 0.2
 z_dim = 100
-batch_size = 32
+batch_size = 8
 im_dim = 28
 save_model = True
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
@@ -93,6 +93,7 @@ for i in range(n_d_vars):
 g_jacob_p2 = jac(g_z, g_vars)
 g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
 for i in range(n_g_vars):
+    print(dt.datetime.now().strftime("%H:%M"), i)
     for j in range(batch_size):
         for k in range(im_dim):
             for l in range(im_dim):
@@ -110,6 +111,7 @@ init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 # run simultaneous gradient descent
+print(dt.datetime.now().strftime("%H:%M"), ' Training process started!')
 with tf.Session() as sess:
     sess.run(init)
     d_losses = []
@@ -135,7 +137,7 @@ with tf.Session() as sess:
         g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
 
         if (epoch + 1) % display_step == 0:
-            print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
+            print(dt.datetime.now().strftime("%H:%M"), " Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
                   " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
 
         if (epoch + 1) % save_image_step == 0:
@@ -155,7 +157,7 @@ with tf.Session() as sess:
         config_file.close()
         os.mkdir(save_dir + time + '/generated_images')
         save_path = saver.save(sess, save_dir+time+'/model.ckpt')
-        print("Model saved in path: %s" % save_path)
+        print(dt.datetime.now().strftime("%H:%M"), " Model saved in path: %s" % save_path)
 
 # show optimization progress
 _, ax = plt.subplots()
