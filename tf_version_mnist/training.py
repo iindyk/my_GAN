@@ -14,7 +14,7 @@ save_image_step = 500
 learning_rate = 0.02
 momentum = 0.2
 z_dim = 100
-batch_size = 8
+batch_size = 4
 im_dim = 28
 save_model = True
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
@@ -91,14 +91,15 @@ for i in range(n_d_vars):
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
 g_jacob_p2 = jac(g_z, g_vars)
-g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
+#g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
+g_grad_p2 = []
 for i in range(n_g_vars):
     print(dt.datetime.now().strftime("%H:%M"), i)
-    for j in range(batch_size):
-        for k in range(im_dim):
-            for l in range(im_dim):
-                g_grad_p2[i] += g_grad_p2_1[j, k, l, 0]*g_jacob_p2[i][j, k, l, 0]
-
+    #for j in range(batch_size):
+    #   for k in range(im_dim):
+    #        for l in range(im_dim):
+    #           g_grad_p2[i] += g_grad_p2_1[j, k, l, 0]*g_jacob_p2[i][j, k, l, 0]
+    g_grad_p2.append(tf.tensordot(g_grad_p2_1, g_jacob_p2[i], axes=[[0, 1, 2, 3], [0, 1, 2, 3]]))
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] +
                               (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2[i])))
