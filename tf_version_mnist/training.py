@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 import os
 from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
+import resource
 
 
 nit = 1000
@@ -21,6 +22,14 @@ save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2
 channel = 1     # todo
 
+# setting max heap size limit
+rsrc = resource.RLIMIT_DATA
+_, hard = resource.getrlimit(rsrc)
+resource.setrlimit(rsrc, ((1024**3)*9, hard))
+soft, hard = resource.getrlimit(rsrc)
+print('Soft limit changed to :', soft/(1024**3), 'GB')
+
+# uploading data
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
@@ -94,7 +103,6 @@ g_jacob_p2 = jac(g_z, g_vars)
 #g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
 g_grad_p2 = []
 for i in range(n_g_vars):
-    print(dt.datetime.now().strftime("%H:%M"), i)
     #for j in range(batch_size):
     #   for k in range(im_dim):
     #        for l in range(im_dim):
@@ -107,6 +115,7 @@ for i in range(n_g_vars):
 
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
+print(dt.datetime.now().strftime("%H:%M"), ' Initialization completed.')
 
 # Add ops to save and restore all the variables.
 saver = tf.train.Saver()
