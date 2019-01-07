@@ -8,25 +8,26 @@ from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
 import resource
 
 
-nit = 1000              # number of training iterations
+nit = 4000              # number of training iterations
 display_step = 100      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
 momentum = 0.2          # parameter for momentum learning rule
 z_dim = 100             # generator input dimension
-batch_size = 4          # size of training sample used for training
+batch_size = 64         # size of training sample used for training
 im_dim = 28             # one-side dimension of square image
-save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
+save_model = False       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
+gen_alpha = 0.001       # generator risk parameter
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
 _, hard = resource.getrlimit(rsrc)
-resource.setrlimit(rsrc, ((1024**3)*9, hard))
+resource.setrlimit(rsrc, ((1024**3)*8, hard))
 soft, hard = resource.getrlimit(rsrc)
-print('Soft RAM limit changed to:', soft/(1024**3), 'GB')
+print('Soft RAM limit is set to:', soft/(1024**3), 'GB')
 
 # clearing computation graph
 tf.reset_default_graph()
@@ -59,8 +60,8 @@ y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
-generator = Generator1(batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
-                       x_test=x_train[:1000, :, :], y_test=y_train[:1000])
+generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :],
+                       initial_y_train=y_train[:100], x_test=x_train[:1000, :, :], y_test=y_train[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
 _, d_x = discriminator.act(x_placeholder, y_placeholder)
@@ -102,15 +103,11 @@ for i in range(n_d_vars):
     new_d_accumulation.append(d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i]))
     new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
 
-g_jacob_p2 = jac(g_z, g_vars)
-# g_grad_p2 = [tf.zeros_like(g_v) for g_v in g_vars]
-g_grad_p2 = []
+# g_jacob_p2 = jac(g_z, g_vars)
+# g_grad_p2 = []
+g_grad_p2 = tf.gradients(xs=g_vars, ys=tf.tensordot(g_grad_p2_1, g_z, axes=[[0, 1, 2, 3], [0, 1, 2, 3]]))
 for i in range(n_g_vars):
-    # for j in range(batch_size):
-    #   for k in range(im_dim):
-    #        for l in range(im_dim):
-    #           g_grad_p2[i] += g_grad_p2_1[j, k, l, 0]*g_jacob_p2[i][j, k, l, 0]
-    g_grad_p2.append(tf.tensordot(g_grad_p2_1, g_jacob_p2[i], axes=[[0, 1, 2, 3], [0, 1, 2, 3]]))
+    # g_grad_p2.append(tf.tensordot(g_grad_p2_1, g_jacob_p2[i], axes=[[0, 1, 2, 3], [0, 1, 2, 3]]))
     g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad_p1[i].get_shape(), trainable=False))
     new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] +
                               (1.-momentum) * (g_grad_p1[i]+generator.alpha*g_grad_p2[i])))

@@ -132,7 +132,7 @@ class Generator0:
 
 
 class Generator1:
-    def __init__(self, batch_size, y_dim, output_size, channel,
+    def __init__(self, alpha, batch_size, y_dim, output_size, channel,
                  initial_x_train=None, initial_y_train=None, x_test=None, y_test=None):
         self.batch_size = batch_size
         self.y_dim = y_dim
@@ -144,7 +144,7 @@ class Generator1:
         self.y_test = [(1. if y_test[j, 0] == 1. else -1.) for j in range(len(y_test))]
         self.prob_approx = 0.
         self.a = 1.
-        self.alpha = 1.
+        self.alpha = alpha
 
     def act(self, z, y, reuse=False):
         with tf.variable_scope('generator') as scope:
