@@ -1,7 +1,5 @@
-import numpy as np
-from generator import *
-from discriminator import *
-from data import *
+from np_version_old.discriminator import *
+from np_version_old.data import *
 import matplotlib.pyplot as plt
 
 # training parameters

@@ -9,18 +9,18 @@ import resource
 
 
 nit = 4000              # number of training iterations
-display_step = 100      # progress display step
+display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
 momentum = 0.2          # parameter for momentum learning rule
 z_dim = 100             # generator input dimension
 batch_size = 64         # size of training sample used for training
 im_dim = 28             # one-side dimension of square image
-save_model = False       # if save_model generator and discriminator will be saved in save_dir folder
+save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 0.001       # generator risk parameter
+gen_alpha = 1e-5       # generator risk parameter
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA

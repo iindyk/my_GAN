@@ -9,9 +9,11 @@ batch_size = 64
 generate_batches = 1
 y_dim = 2
 channel = 1
-model_to_load = '01-06_18:11'
-model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
-generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/generated_images'
+im_dim = 28
+model_to_load = '01-07_15:44'
+model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
+generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/generated_images'
+gen_alpha = 1.
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
@@ -32,13 +34,13 @@ y_train = np.array(y_train, dtype=np.float32)
 n = len(x_train)
 
 # placeholder for input images to the discriminator
-x_placeholder = tf.placeholder("float", shape=[batch_size, 28, 28, 1])
+x_placeholder = tf.placeholder("float", shape=[batch_size, im_dim, im_dim, channel])
 y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
 # placeholder for input noise vectors to the generator
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
-generator = Generator1(batch_size, y_dim, 28, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
+generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
                        x_test=x_train[:1000, :, :], y_test=y_train[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
