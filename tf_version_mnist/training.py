@@ -8,7 +8,7 @@ from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
 import resource
 
 
-nit = 4000              # number of training iterations
+nit = 3000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
@@ -20,14 +20,14 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 1e-5       # generator risk parameter
+gen_alpha = 0.1       # generator risk parameter
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
 _, hard = resource.getrlimit(rsrc)
 resource.setrlimit(rsrc, ((1024**3)*8, hard))
 soft, hard = resource.getrlimit(rsrc)
-print('Soft RAM limit is set to:', soft/(1024**3), 'GB')
+print('Soft RAM limit set to:', soft/(1024**3), 'GB')
 
 # clearing computation graph
 tf.reset_default_graph()
@@ -41,7 +41,7 @@ x_train = []
 y_train = []
 # take only images of 7 and 1
 for i in range(len(y_train_all)):
-    if y_train_all[i] == 7:
+    if y_train_all[i] == 0:
         x_train.append(x_train_all[i])
         y_train.append([1., 0])
     elif y_train_all[i] == 1:
