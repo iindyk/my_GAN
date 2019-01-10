@@ -170,7 +170,7 @@ with tf.Session() as sess:
                           '\ngenerator alpha='+str(generator.alpha)+'\ngenerator a='+str(generator.a))
         config_file.close()
         os.mkdir(save_dir + time + '/generated_images')
-        save_path = saver.save(sess, save_dir+time+'/model.ckpt')
+        save_path = saver.save(sess, save_dir+time+'_'+str(generator.alpha)+'/model.ckpt')
         print(dt.datetime.now().strftime("%H:%M"), " Model saved in path: %s" % save_path)
 
 # show optimization progress

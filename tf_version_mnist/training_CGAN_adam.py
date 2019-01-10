@@ -6,11 +6,11 @@ import datetime as dt
 import os
 
 
-nit = 3000
+nit = 10000
 kit_discriminator = 1
 display_step = 500
-save_image_step = 1000
-learning_rate = 0.02
+save_image_step = 500
+learning_rate = 0.0002
 momentum = 0.2
 z_dim = 100
 im_dim = 28
@@ -71,26 +71,11 @@ g_vars = [var for var in train_vars if 'gen' in var.name]
 n_d_vars = len(d_vars)
 n_g_vars = len(g_vars)
 
-# get discriminator and generator gradients lists
-d_grad = tf.gradients(xs=d_vars, ys=d_loss)
-g_grad = tf.gradients(xs=g_vars, ys=g_loss)
+# optimizer for each network
+with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+    d_optim = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(g_loss, var_list=g_vars)
 
-# gradient descent step description
-new_d_vars = []
-new_g_vars = []
-d_accumulation = []
-new_d_accumulation = []
-g_accumulation = []
-new_g_accumulation = []
-for i in range(n_d_vars):
-    d_accumulation.append(tf.get_variable('accum_d'+str(i), shape=d_grad[i].get_shape(), trainable=False))
-    new_d_accumulation.append(d_accumulation[i].assign(momentum * d_accumulation[i] + (1.-momentum)*d_grad[i]))
-    new_d_vars.append(d_vars[i].assign(d_vars[i] - learning_rate * d_accumulation[i]))
-
-for i in range(n_g_vars):
-    g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad[i].get_shape(), trainable=False))
-    new_g_accumulation.append(g_accumulation[i].assign(momentum * g_accumulation[i] + (1.-momentum) * g_grad[i]))
-    new_g_vars.append(g_vars[i].assign(g_vars[i] - learning_rate * g_accumulation[i]))
 
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
@@ -111,21 +96,21 @@ with tf.Session() as sess:
         real_labels_batch = y_train[perm]
 
         # make gradient descent step for discriminator
-        _, _, d_loss_val = sess.run([new_d_vars, new_d_accumulation, d_loss],
-                                    feed_dict={z_placeholder: z_batch, x_placeholder: real_image_batch,
-                                               y_placeholder: real_labels_batch})
+        loss_d_, _ = sess.run([d_loss, d_optim], {x_placeholder: real_image_batch,
+                                                  z_placeholder: z_batch,
+                                                  y_placeholder: real_labels_batch})
 
         # make gradient descent step for generator
-        _, _, g_loss_val = sess.run([new_g_vars, new_g_accumulation, g_loss],
-                                    feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
+        loss_g_, _ = sess.run([g_loss, g_optim],{z_placeholder: z_batch,
+                                                 y_placeholder: real_labels_batch})
 
         # memorize losses for graphing
-        d_losses.append(d_loss_val)
-        g_losses.append(g_loss_val)
+        d_losses.append(loss_d_)
+        g_losses.append(loss_g_)
 
         if (epoch + 1) % display_step == 0:
-            print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
-                  " generator loss=", "{:.9f}".format(g_loss_val))
+            print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(loss_d_),
+                  " generator loss=", "{:.9f}".format(loss_g_))
 
         if (epoch + 1) % save_image_step == 0:
             sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)

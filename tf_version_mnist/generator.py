@@ -155,16 +155,16 @@ class Generator1:
             c1, c2 = int(self.output_size / 4), int(self.output_size / 2)
 
             # 10 stand for the num of labels
-            d1 = tf.nn.relu(batch_normal(fully_connect(_z, output_size=1024, scope='gen_fully'), scope='gen_bn1'))
+            d1 = tf.nn.leaky_relu(batch_normal(fully_connect(_z, output_size=1024, scope='gen_fully'), scope='gen_bn1'))
 
             d1 = tf.concat([d1, y], 1)
-            d2 = tf.nn.relu(
+            d2 = tf.nn.leaky_relu(
                 batch_normal(fully_connect(d1, output_size=7 * 7 * 2 * 64, scope='gen_fully2'), scope='gen_bn2'))
 
             d2 = tf.reshape(d2, [self.batch_size, c1, c1, 64 * 2])
             d2 = conv_cond_concat(d2, yb)
 
-            d3 = tf.nn.relu(batch_normal(de_conv(d2, output_shape=[self.batch_size, c2, c2, 128], name='gen_deconv1'),
+            d3 = tf.nn.leaky_relu(batch_normal(de_conv(d2, output_shape=[self.batch_size, c2, c2, 128], name='gen_deconv1'),
                                          scope='gen_bn3'))
 
             d3 = conv_cond_concat(d3, yb)
