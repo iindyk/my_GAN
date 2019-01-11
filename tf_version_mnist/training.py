@@ -20,7 +20,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 10.       # generator risk parameter
+gen_alpha = 0.25       # generator risk parameter
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -163,13 +163,13 @@ with tf.Session() as sess:
     if save_model:
         # Save model
         time = dt.datetime.now().strftime("%m-%d_%H:%M")
-        os.mkdir(save_dir + time)
-        config_file = open(save_dir+time+'/config.txt', 'w+')
+        os.mkdir(save_dir + time+'_'+str(generator.alpha))
+        config_file = open(save_dir+time+'_'+str(generator.alpha)+'/config.txt', 'w+')
         config_file.write('nit='+str(nit)+'\nlearning rate='+str(learning_rate)+
                           '\nmomentum='+str(momentum)+'\nz_dim='+str(z_dim)+'\nbatch size='+str(batch_size) +
                           '\ngenerator alpha='+str(generator.alpha)+'\ngenerator a='+str(generator.a))
         config_file.close()
-        os.mkdir(save_dir + time + '/generated_images')
+        os.mkdir(save_dir+time+'_'+str(generator.alpha)+'/generated_images')
         save_path = saver.save(sess, save_dir+time+'_'+str(generator.alpha)+'/model.ckpt')
         print(dt.datetime.now().strftime("%H:%M"), " Model saved in path: %s" % save_path)
 
