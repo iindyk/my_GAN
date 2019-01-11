@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 z_dim = 100
 batch_size = 64
-generate_batches = 1
+generate_batches = 2
 y_dim = 2
 channel = 1
 im_dim = 28
-model_to_load = '01-09_19:50'
+model_to_load = '01-10_19:28'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/generated_images'
 gen_alpha = 1.
