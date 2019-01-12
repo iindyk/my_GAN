@@ -28,10 +28,10 @@ x_train = []
 y_train = []
 # take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] == 0:
+    if y_train_all[i] == 5:
         x_train.append(x_train_all[i])
         y_train.append([1., 0])
-    elif y_train_all[i] == 1:
+    elif y_train_all[i] == 6:
         x_train.append(x_train_all[i])
         y_train.append([0., 1.])
 
@@ -131,7 +131,7 @@ with tf.Session() as sess:
             sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
             temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
             img_array = temp[0, :, :, 0]
-            plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
+            plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch+1)+'.jpeg',
                        img_array, cmap='gray_r')
     if save_model:
         # Save model

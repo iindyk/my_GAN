@@ -20,7 +20,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 0.25       # generator risk parameter
+gen_alpha = 0.75       # generator risk parameter
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -158,7 +158,7 @@ with tf.Session() as sess:
             sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
             temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
             img_array = temp[0, :, :, 0]
-            plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch)+'.jpeg',
+            plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch+1)+'.jpeg',
                        img_array, cmap='gray_r')
     if save_model:
         # Save model
