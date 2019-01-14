@@ -21,6 +21,7 @@ save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
 gen_alpha = 0.75       # generator risk parameter
+labels_to_use = [0, 1]
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -37,20 +38,33 @@ tf.reset_default_graph()
 x_train_all, x_test_all = x_train_all/255., x_test_all/255.
 x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
 
+# take only images of digits from labels_to_use
 x_train = []
 y_train = []
-# take only images of 7 and 1
 for i in range(len(y_train_all)):
-    if y_train_all[i] == 0:
+    if y_train_all[i] == labels_to_use[0]:
         x_train.append(x_train_all[i])
         y_train.append([1., 0])
-    elif y_train_all[i] == 1:
+    elif y_train_all[i] == labels_to_use[1]:
         x_train.append(x_train_all[i])
         y_train.append([0., 1.])
+
+x_test = []
+y_test = []
+for i in range(len(y_test_all)):
+    if y_test_all[i] == labels_to_use[0]:
+        x_test.append(x_test_all[i])
+        y_test.append([1., 0])
+    elif y_test_all[i] == labels_to_use[1]:
+        x_test.append(x_test_all[i])
+        y_test.append([0., 1.])
+
 
 x_train = np.array(x_train, dtype=np.float32)
 y_train = np.array(y_train, dtype=np.float32)
 n = len(x_train)
+x_test = np.array(x_test, dtype=np.float32)
+y_test = np.array(y_test, dtype=np.float32)
 
 # placeholder for input images to the discriminator
 x_placeholder = tf.placeholder("float", shape=[batch_size, im_dim, im_dim, 1])
@@ -60,8 +74,9 @@ y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
-generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :],
-                       initial_y_train=y_train[:100], x_test=x_train[:1000, :, :], y_test=y_train[:1000])
+generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel,
+                       initial_x_train=x_train[:100], initial_y_train=y_train[:100],
+                       x_test=x_test[:1000], y_test=y_test[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
 _, d_x = discriminator.act(x_placeholder, y_placeholder)

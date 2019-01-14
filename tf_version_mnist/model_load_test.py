@@ -10,7 +10,8 @@ generate_batches = 2
 y_dim = 2
 channel = 1
 im_dim = 28
-model_to_load = '01-14_15:07_0.75'
+labels_to_use = [0, 1]
+model_to_load = '01-14_16:31_0.75'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/generated_images'
 gen_alpha = 1.
@@ -20,12 +21,11 @@ x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x
 
 x_train = []
 y_train = []
-# take only images of 0 and 9
 for i in range(len(y_train_all)):
-    if y_train_all[i] == 7:
+    if y_train_all[i] == labels_to_use[0]:
         x_train.append(x_train_all[i])
         y_train.append([1., 0])
-    elif y_train_all[i] == 1:
+    elif y_train_all[i] == labels_to_use[1]:
         x_train.append(x_train_all[i])
         y_train.append([0., 1.])
 
