@@ -4,7 +4,6 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import datetime as dt
 import os
-from tensorflow.python.ops.parallel_for.gradients import jacobian as jac
 import resource
 
 
