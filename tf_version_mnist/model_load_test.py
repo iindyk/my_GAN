@@ -11,7 +11,7 @@ y_dim = 2
 channel = 1
 im_dim = 28
 labels_to_use = [0, 1]
-model_to_load = '01-15_14:23_1.0'
+model_to_load = '01-15_16:25_2.0'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/generated_images'
 gen_alpha = 1.
@@ -40,8 +40,8 @@ y_placeholder = tf.placeholder("float", shape=[batch_size, y_dim])
 z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
-generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :], initial_y_train=y_train[:100],
-                       x_test=x_train[:1000, :, :], y_test=y_train[:1000])
+generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel, initial_x_train=x_train[:100, :, :],
+                       initial_y_train=y_train[:100], x_test=x_train[:1000, :, :], y_test=y_train[:1000])
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
 _, d_x = discriminator.act(x_placeholder, y_placeholder)
@@ -62,6 +62,6 @@ with tf.Session() as sess:
         temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: y_batch})
         for j in range(batch_size):
             img_array = temp[j, :, :, 0]
-            label = '7' if y_batch[j, 0] == 1. else '1'
+            label = str(labels_to_use[0]) if y_batch[j, 0] == 1. else str(labels_to_use[1])
             plt.imsave(generated_images_path + '/' + label + '_batch' + str(i) + 'im' + str(j) + '.jpeg', img_array,
                        cmap='gray_r')
