@@ -1,7 +1,7 @@
 from PIL import Image
 
-alpha = '1.0'
-label = '1'
+alpha = '10.0'
+label = '0'
 im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/1vs0/'+alpha+'/'
 
 images = map(Image.open, [im_dir+label+'_1.jpeg', im_dir+label+'_2.jpeg', im_dir+label+'_3.jpeg', im_dir+label+'_4.jpeg'])
