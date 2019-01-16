@@ -30,7 +30,7 @@ def show_images(images, cols=1, titles=None):
 
 im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/1vs0/'
 labels = ['0', '1']
-alphas = ['0.0', '0.25', '0.5', '0.75', '1.0']
+alphas = ['0.0', '0.25', '0.5', '0.75', '1.0', '10.0']
 im_list = []
 titles = []
 for l in labels:
