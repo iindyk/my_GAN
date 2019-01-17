@@ -111,16 +111,18 @@ with tf.Session() as sess:
                 false_pos += 1
         print('Batch', i, ': data was generated = ', data_was_generated, '; accepted images = ', accepted)
 
-# save results to pickle
-data_pickle = open("/home/iindyk/PycharmProjects/my_GAN/results.pickle", "wb+")
-data_dict = pickle.load(data_pickle)
-new_key = 'gen_alpha='+str(gen_alpha)+'gen_multiplier='+str(gen_multiplier) + \
+# update pickle
+data_pickle_read = open("/home/iindyk/PycharmProjects/my_GAN/results.pickle", "rb")
+data_dict = pickle.load(data_pickle_read)
+data_pickle_read.close()
+new_key = 'gen_alpha='+str(gen_alpha)+';gen_multiplier='+str(gen_multiplier) + \
           ';validation_crit_val='+str(validation_crit_val)+';labels_to_use='+str(labels_to_use) + \
           ';skip_validation='+str(skip_validation)+';false_positive='+str(false_pos/(n_batches*batch_size)) + \
           ';false_negative='+str(false_neg/(n_batches*batch_size))
 data_dict[new_key] = errs
-pickle.dump(data_dict, data_pickle)
-data_pickle.close()
+data_pickle_write = open("/home/iindyk/PycharmProjects/my_GAN/results.pickle", "wb")
+pickle.dump(data_dict, data_pickle_write)
+data_pickle_write.close()
 
 _, ax = plt.subplots()
 ax.plot(np.arange(n_batches), errs, '-', label='test prediction errors')
