@@ -13,12 +13,12 @@ n_batches = 100             # number of generated batches = number of real train
 y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
-gen_multiplier = 1         # 1/gen_multiplier share of training data will be generated
+gen_multiplier = 101        # 1/gen_multiplier share of training data will be generated
 validation_crit_val = 0.7
 skip_validation = True
 labels_to_use = [0, 1]
-gen_alpha = 0.75
-model_to_load = '01-11_21:00_0.75_ok'
+gen_alpha = 10.0
+model_to_load = '01-15_19:17_10.0'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/generated_images'
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -71,8 +71,8 @@ _, d_x = discriminator.act(x_placeholder, y_placeholder)
 # g_z holds the generated images
 g_z = generator.act(z_placeholder, y_placeholder)
 
-online_training_data = np.reshape(x_train[:100], newshape=(100, 784))
-online_training_labels = y_train[:100]
+online_training_data = np.reshape(x_train[:10], newshape=(10, 784))
+online_training_labels = y_train[:10]
 errs = []
 saver = tf.train.Saver()
 with tf.Session() as sess:
@@ -109,7 +109,9 @@ with tf.Session() as sess:
                     false_neg += 1
             elif not data_was_generated:
                 false_pos += 1
-        print('Batch', i, ': data was generated = ', data_was_generated, '; accepted images = ', accepted)
+        print('Batch', i, ': data was generated =', data_was_generated, '; accepted images =', accepted)
+
+print('false_positive='+str(false_pos/(n_batches*batch_size))+';false_negative='+str(false_neg/(n_batches*batch_size)))
 
 # update pickle
 data_pickle_read = open("/home/iindyk/PycharmProjects/my_GAN/results.pickle", "rb")

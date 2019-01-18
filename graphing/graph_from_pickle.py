@@ -9,6 +9,6 @@ _, ax = plt.subplots()
 n_batches = 100
 for key, val in data_dict.items():
     ax.plot(np.arange(n_batches), val, '-')
-    print(key)
+    print(key[key.find('gen_alpha='):key.find(';')])
 
 plt.show()
