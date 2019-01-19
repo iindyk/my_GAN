@@ -7,7 +7,7 @@ import os
 import resource
 
 
-nit = 5000              # number of training iterations
+nit = 3000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
@@ -19,8 +19,8 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 10.      # generator risk parameter
-labels_to_use = [5, 6]
+gen_alpha = 1. *(764/164)     # generator risk parameter
+labels_to_use = [0, 1]
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -74,8 +74,8 @@ z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
 generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel,
-                       initial_x_train=x_train[:100], initial_y_train=y_train[:100],
-                       x_test=x_test[:1000], y_test=y_test[:1000])
+                       initial_x_train=x_train[:700], initial_y_train=y_train[:700],
+                       x_test=x_test, y_test=y_test)
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
 _, d_x = discriminator.act(x_placeholder, y_placeholder)
