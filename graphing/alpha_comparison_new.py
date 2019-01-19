@@ -28,8 +28,8 @@ def show_images(images, cols=1, titles=None):
     plt.show()
 
 
-im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/1vs0/'
-labels = ['0', '1']
+im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/5vs6/'
+labels = ['5', '6']
 alphas = ['0.0', '0.25', '0.5', '0.75', '1.0', '10.0']
 im_list = []
 titles = []

@@ -7,7 +7,7 @@ import os
 import resource
 
 
-nit = 3000              # number of training iterations
+nit = 5000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
@@ -19,7 +19,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 1.      # generator risk parameter
+gen_alpha = 10.      # generator risk parameter
 labels_to_use = [5, 6]
 
 # setting max heap size limit
