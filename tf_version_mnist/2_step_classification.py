@@ -16,11 +16,11 @@ y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.3             # % of training set to be generated
-sample_from_orig = True     # sample generated data from original
+sample_from_orig = False     # sample generated data from original
 validation_crit_val = 0.7
 skip_validation = True
 labels_to_use = [0, 1]
-model_to_load = '01-19_14:32_1.0'
+model_to_load = '01-19_15:57_4.658536585365853'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
@@ -93,16 +93,18 @@ with tf.Session() as sess:
                 if (j+1)*batch_size <= (int(n_t * gen_share)):
                     y_batch = additional_y_train[j*batch_size:(j+1)*batch_size]
                 else:
-                    y_batch = np.append(additional_y_train[j*batch_size:], np.ones(int(n_t * gen_share)-j*batch_size), axis=0)
+                    y_batch = np.append(additional_y_train[j*batch_size:], [[1., 0.]]*((j+1)*batch_size-int(n_t * gen_share)),
+                                        axis=0)
 
                 z_batch = np.random.uniform(-1, 1, size=[batch_size, z_dim])
                 additional_x_train = np.append(additional_x_train,
                                                np.reshape(sess.run(g_z, feed_dict={z_placeholder: z_batch,
                                                                                    y_placeholder: y_batch}),
-                                                          newshape=(-1, 784)))
+                                                          newshape=(-1, 784)), axis=0)
 
-        train_data = np.append(np.reshape(x_train[:int(n_t*(1-gen_share))], newshape=(-1, 784)), additional_x_train, axis=0)
-        train_labels = np.append(y_train[:int(n_t*(1-gen_share))], additional_y_train, axis=0)
+        train_data = np.append(np.reshape(x_train[:int(n_t*(1-gen_share))], newshape=(-1, 784)),
+                               additional_x_train[:int(n_t * gen_share)], axis=0)
+        train_labels = np.append(y_train[:int(n_t*(1-gen_share))], additional_y_train[:int(n_t * gen_share)], axis=0)
         train_labels = [(1. if train_labels[k, 0] == 1. else -1.) for k in range(len(train_labels))]
         svc = svm.SVC(kernel='linear').fit(train_data, train_labels)
         errs.append(1 - accuracy_score(y_test, svc.predict(x_test)))
