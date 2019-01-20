@@ -43,7 +43,7 @@ y_train = []
 for i in range(len(y_train_all)):
     if y_train_all[i] == labels_to_use[0]:
         x_train.append(x_train_all[i])
-        y_train.append([1., 0])
+        y_train.append([1., 0.])
     elif y_train_all[i] == labels_to_use[1]:
         x_train.append(x_train_all[i])
         y_train.append([0., 1.])
@@ -53,7 +53,7 @@ y_test = []
 for i in range(len(y_test_all)):
     if y_test_all[i] == labels_to_use[0]:
         x_test.append(x_test_all[i])
-        y_test.append([1., 0])
+        y_test.append([1., 0.])
     elif y_test_all[i] == labels_to_use[1]:
         x_test.append(x_test_all[i])
         y_test.append([0., 1.])

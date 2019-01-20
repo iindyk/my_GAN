@@ -17,8 +17,8 @@ channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
 sample_from_orig = False     # sample generated data from original
-data_shift = 2500
-validation_crit_val = 2.4
+data_shift = 2520
+validation_crit_val = 2.06
 skip_validation = False
 labels_to_use = [5, 6]
 model_to_load = '01-16_13:39_ok'
@@ -38,7 +38,7 @@ n_orig = int(n_t*(1-gen_share))     # beware of index out of bounds
 for i in range(len(y_train_all)):
     if y_train_all[i] == labels_to_use[0]:
         x_train.append(x_train_all[i])
-        y_train.append([1., 0])
+        y_train.append([1., 0.])
     elif y_train_all[i] == labels_to_use[1]:
         x_train.append(x_train_all[i])
         y_train.append([0., 1.])
