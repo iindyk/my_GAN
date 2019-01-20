@@ -81,13 +81,14 @@ with tf.Session() as sess:
     false_neg = 0
 
     errs = []
+    false_pos = []
+    false_neg = []
     for trial in range(n_trials):
         indices = np.random.randint(low=int(n_t * (1 - gen_share)), high=len(y_train), size=int(n_t * gen_share))
         additional_y_train = y_train[indices, :]
         if sample_from_orig:
             additional_x_train = np.reshape(x_train[indices, :, :], (-1, 784))
         else:
-            # todo
             additional_x_train = np.empty((0, 784), np.float32)
             for j in range((int(n_t * gen_share))//batch_size+1):
                 if (j+1)*batch_size <= (int(n_t * gen_share)):
@@ -102,14 +103,48 @@ with tf.Session() as sess:
                                                                                    y_placeholder: y_batch}),
                                                           newshape=(-1, 784)), axis=0)
 
-        train_data = np.append(np.reshape(x_train[:int(n_t*(1-gen_share))], newshape=(-1, 784)),
-                               additional_x_train[:int(n_t * gen_share)], axis=0)
-        train_labels = np.append(y_train[:int(n_t*(1-gen_share))], additional_y_train[:int(n_t * gen_share)], axis=0)
-        train_labels = [(1. if train_labels[k, 0] == 1. else -1.) for k in range(len(train_labels))]
+        train_data_tmp = np.append(np.reshape(x_train[:int(n_t*(1-gen_share))], newshape=(-1, 784)),
+                                   additional_x_train[:int(n_t * gen_share)], axis=0)
+        train_labels_tmp = np.append(y_train[:int(n_t*(1-gen_share))], additional_y_train[:int(n_t * gen_share)], axis=0)
+
+        train_data = []
+        train_labels = []
+
+        false_pos.append(0)
+        false_neg.append(0)
+        # validation
+        for j in range(n_t//batch_size+1):
+            if (j+1)*batch_size <= n_t:
+                x_batch = train_data_tmp[j*batch_size:(j+1)*batch_size]
+                y_batch = train_labels_tmp[j*batch_size:(j+1)*batch_size]
+            else:
+                x_batch = np.append(train_data_tmp[j*batch_size:], np.zeros(((j+1)*batch_size-n_t, 784)), axis=0)
+                y_batch = np.append(train_labels_tmp[j*batch_size:], [[0., 1.]]*((j+1)*batch_size-n_t), axis=0)
+
+            # calculate statistics values
+            stat_vals = sess.run(d_x, feed_dict={
+                x_placeholder: np.reshape(x_batch, newshape=[batch_size, im_dim, im_dim, channel]),
+                y_placeholder: y_batch})
+            accepted = 0
+            for k in range(batch_size):
+                was_generated = (k+j*batch_size > int(n_t*(1-gen_share))) and not sample_from_orig
+                validation_success = stat_vals[k, 0] < validation_crit_val or skip_validation
+                if validation_success:
+                    train_data.append(np.reshape(x_batch[k], newshape=(1, 784)))
+                    train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
+
+                if validation_success and was_generated:
+                    false_neg[trial] += 1
+                if not validation_success and not was_generated:
+                    false_pos[trial] += 1
+
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
 
 
-print('mean=', np.mean(errs))
-print('stdev=', np.std(errs))
+print('error=', np.mean(errs)*100, '+-', (np.std(errs)*1.96/np.sqrt(n_trials))*100)
+
+if not skip_validation:
+    print('false negative=', (np.mean(false_neg)/n_t)*100, '+-', (np.std(false_neg)*100/n_t)*1.96/np.sqrt(n_trials))
+    print('false positive=', (np.mean(false_pos)/n_t)*100, '+-', (np.std(false_pos)*100/n_t)*1.96/np.sqrt(n_trials))
 
