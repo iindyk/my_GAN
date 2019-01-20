@@ -7,21 +7,22 @@ import matplotlib.pyplot as plt
 import pickle
 
 
-n_trials = 100             # number of trials
-n_t = 100                  # total number of training points
+n_trials = 1000             # number of trials
+n_t = 100                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
 n_batches = 100             # number of generated batches = number of real training batches
 y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
-gen_share = 0.3             # % of training set to be generated
-sample_from_orig = True     # sample generated data from original
-validation_crit_val = 0.7
-skip_validation = True
+gen_share = 0.4             # % of training set to be generated
+sample_from_orig = False     # sample generated data from original
+data_shift = 2500
+validation_crit_val = 2.4
+skip_validation = False
 labels_to_use = [5, 6]
-model_to_load = '01-19_21:50_1.0'
-model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
+model_to_load = '01-16_13:39_ok'
+model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
 
 
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -84,7 +85,7 @@ with tf.Session() as sess:
     false_pos = []
     false_neg = []
     for trial in range(n_trials):
-        indices = np.random.randint(low=int(n_t * (1 - gen_share)), high=len(y_train), size=int(n_t * gen_share))
+        indices = np.random.randint(low=int(n_t * (1 - gen_share))+data_shift, high=len(y_train), size=int(n_t * gen_share))
         additional_y_train = y_train[indices, :]
         if sample_from_orig:
             additional_x_train = np.reshape(x_train[indices, :, :], (-1, 784))
@@ -103,15 +104,17 @@ with tf.Session() as sess:
                                                                                    y_placeholder: y_batch}),
                                                           newshape=(-1, 784)), axis=0)
 
-        train_data_tmp = np.append(np.reshape(x_train[:int(n_t*(1-gen_share))], newshape=(-1, 784)),
+        train_data_tmp = np.append(np.reshape(x_train[data_shift:int(n_t*(1-gen_share))+data_shift], newshape=(-1, 784)),
                                    additional_x_train[:int(n_t * gen_share)], axis=0)
-        train_labels_tmp = np.append(y_train[:int(n_t*(1-gen_share))], additional_y_train[:int(n_t * gen_share)], axis=0)
+        train_labels_tmp = np.append(y_train[data_shift:int(n_t*(1-gen_share))+data_shift],
+                                     additional_y_train[:int(n_t * gen_share)], axis=0)
 
         train_data = []
         train_labels = []
 
         false_pos.append(0)
         false_neg.append(0)
+
         # validation
         for j in range(n_t//batch_size+1):
             if (j+1)*batch_size <= n_t:
@@ -127,16 +130,17 @@ with tf.Session() as sess:
                 y_placeholder: y_batch})
             accepted = 0
             for k in range(batch_size):
-                was_generated = (k+j*batch_size > int(n_t*(1-gen_share))) and not sample_from_orig
-                validation_success = stat_vals[k, 0] < validation_crit_val or skip_validation
-                if validation_success:
-                    train_data.append(np.reshape(x_batch[k], newshape=(1, 784)))
-                    train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
+                if k+j*batch_size < n_t:
+                    was_generated = (k+j*batch_size > int(n_t*(1-gen_share))) and not sample_from_orig
+                    validation_success = stat_vals[k, 0] < validation_crit_val or skip_validation
+                    if validation_success:
+                        train_data.append(np.reshape(x_batch[k], newshape=784))
+                        train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
 
-                if validation_success and was_generated:
-                    false_neg[trial] += 1
-                if not validation_success and not was_generated:
-                    false_pos[trial] += 1
+                    if validation_success and was_generated:
+                        false_neg[trial] += 1
+                    if not validation_success and not was_generated:
+                        false_pos[trial] += 1
 
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
