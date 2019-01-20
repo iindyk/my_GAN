@@ -19,7 +19,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 30.     # generator risk parameter
+gen_alpha = 1.     # generator risk parameter
 labels_to_use = [5, 6]
 
 # setting max heap size limit

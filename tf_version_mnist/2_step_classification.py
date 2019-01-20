@@ -20,7 +20,7 @@ sample_from_orig = True     # sample generated data from original
 validation_crit_val = 0.7
 skip_validation = True
 labels_to_use = [5, 6]
-model_to_load = '01-18_18:36_1.0_ok'
+model_to_load = '01-19_21:50_1.0'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
