@@ -2,27 +2,23 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import sklearn.svm as svm
-from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
-import pickle
 
 
 n_trials = 1000             # number of trials
 n_t = 100                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
-n_batches = 100             # number of generated batches = number of real training batches
 y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
 sample_from_orig = False     # sample generated data from original
-data_shift = 2520
-validation_crit_val = 2.06
+data_shift = 0
+validation_crit_val = 3.17
 skip_validation = False
-labels_to_use = [5, 6]
-model_to_load = '01-16_13:39_ok'
-model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_CGAN/' + model_to_load + '/model.ckpt'
+labels_to_use = [0, 1]
+model_to_load = '01-15_18:47_10.0'
+model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
@@ -33,7 +29,7 @@ x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x
 x_train = []
 y_train = []
 
-n_orig = int(n_t*(1-gen_share))     # beware of index out of bounds
+n_orig = int(n_t*(1-gen_share))
 
 for i in range(len(y_train_all)):
     if y_train_all[i] == labels_to_use[0]:
@@ -52,6 +48,7 @@ for i in range(len(y_test_all)):
     elif y_test_all[i] == labels_to_use[1]:
         x_test.append(x_test_all[i])
         y_test.append(-1)
+print(len(y_test))
 
 x_train = np.array(x_train, dtype=np.float32)
 y_train = np.array(y_train, dtype=np.float32)
@@ -78,8 +75,6 @@ with tf.Session() as sess:
     # restore model from file
     saver.restore(sess, model_path)
     print("Model restored.")
-    false_pos = 0
-    false_neg = 0
 
     errs = []
     false_pos = []
@@ -128,11 +123,10 @@ with tf.Session() as sess:
             stat_vals = sess.run(d_x, feed_dict={
                 x_placeholder: np.reshape(x_batch, newshape=[batch_size, im_dim, im_dim, channel]),
                 y_placeholder: y_batch})
-            accepted = 0
             for k in range(batch_size):
                 if k+j*batch_size < n_t:
                     was_generated = (k+j*batch_size > int(n_t*(1-gen_share))) and not sample_from_orig
-                    validation_success = stat_vals[k, 0] < validation_crit_val or skip_validation
+                    validation_success = stat_vals[k, 0] > validation_crit_val or skip_validation
                     if validation_success:
                         train_data.append(np.reshape(x_batch[k], newshape=784))
                         train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
@@ -149,6 +143,8 @@ with tf.Session() as sess:
 print('error=', np.mean(errs)*100, '+-', (np.std(errs)*1.96/np.sqrt(n_trials))*100)
 
 if not skip_validation:
-    print('false negative=', (np.mean(false_neg)/n_t)*100, '+-', (np.std(false_neg)*100/n_t)*1.96/np.sqrt(n_trials))
-    print('false positive=', (np.mean(false_pos)/n_t)*100, '+-', (np.std(false_pos)*100/n_t)*1.96/np.sqrt(n_trials))
+    print('false negative=', (np.mean(false_neg)/(n_t*gen_share))*100,
+          '+-', (np.std(false_neg)*100/(n_t*gen_share))*1.96/np.sqrt(n_trials))
+    print('false positive=', (np.mean(false_pos)/(n_t*(1-gen_share)))*100,
+          '+-', (np.std(false_pos)*100/(n_t*(1-gen_share)))*1.96/np.sqrt(n_trials))
 

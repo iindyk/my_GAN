@@ -19,7 +19,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 1.     # generator risk parameter
+gen_alpha = 5.          # generator risk parameter
 labels_to_use = [5, 6]
 
 # setting max heap size limit
@@ -74,7 +74,7 @@ z_placeholder = tf.placeholder(tf.float32, [None, z_dim])
 
 discriminator = Discriminator1(batch_size, y_dim)
 generator = Generator1(gen_alpha, batch_size, y_dim, im_dim, channel,
-                       initial_x_train=x_train[:70], initial_y_train=y_train[:70],
+                       initial_x_train=x_train[:60], initial_y_train=y_train[:60],
                        x_test=x_test, y_test=y_test)
 
 # d_x will hold discriminator prediction probabilities for the real MNIST images
