@@ -48,7 +48,6 @@ for i in range(len(y_test_all)):
     elif y_test_all[i] == labels_to_use[1]:
         x_test.append(x_test_all[i])
         y_test.append(-1)
-print(len(y_test))
 
 x_train = np.array(x_train, dtype=np.float32)
 y_train = np.array(y_train, dtype=np.float32)
