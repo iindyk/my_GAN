@@ -45,8 +45,6 @@ for i in range(len(y_test_all)):
     elif y_test_all[i] == labels_to_use[1]:
         x_test.append(x_test_all[i])
         y_test.append([0., 1.])
-    #if i >= 999:                            # todo
-    #    break
 
 
 x_train = np.array(x_train, dtype=np.float32)

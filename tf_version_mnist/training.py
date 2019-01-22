@@ -7,7 +7,7 @@ import os
 import resource
 
 
-nit = 3000              # number of training iterations
+nit = 10000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
@@ -19,7 +19,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/'
 y_dim = 2               # number of classes used for training
 channel = 1             # number of channels of image (MNIST is grayscale)
-gen_alpha = 5.          # generator risk parameter
+gen_alpha = .75          # generator risk parameter
 labels_to_use = [5, 6]
 
 # setting max heap size limit
@@ -129,13 +129,13 @@ for i in range(n_g_vars):
 
 # initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
-print(dt.datetime.now().strftime("%H:%M"), ' Initialization completed.')
+print(dt.datetime.now().strftime("%H:%M"), 'Initialization completed.')
 
 # add ops to save and restore all the variables.
 saver = tf.train.Saver()
 
 # run simultaneous gradient descent
-print(dt.datetime.now().strftime("%H:%M"), ' Training process started!')
+print(dt.datetime.now().strftime("%H:%M"), 'Training process started!')
 with tf.Session() as sess:
     sess.run(init)
     d_losses = []
@@ -165,8 +165,8 @@ with tf.Session() as sess:
         g_losses.append(g_loss_p1_val+generator.alpha*generator.prob_approx)
 
         if (epoch + 1) % display_step == 0:
-            print(dt.datetime.now().strftime("%H:%M"), " Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
-                  " generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
+            print(dt.datetime.now().strftime("%H:%M"), "Epoch:", '%04d' % (epoch + 1), "discriminator loss=", "{:.9f}".format(d_loss_val),
+                  "generator loss=", "{:.9f}".format(g_loss_p1_val+generator.alpha*generator.prob_approx))
 
         if (epoch + 1) % save_image_step == 0:
             sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
@@ -185,7 +185,7 @@ with tf.Session() as sess:
         config_file.close()
         os.mkdir(save_dir+time+'_'+str(generator.alpha)+'/generated_images')
         save_path = saver.save(sess, save_dir+time+'_'+str(generator.alpha)+'/model.ckpt')
-        print(dt.datetime.now().strftime("%H:%M"), " Model saved in path: %s" % save_path)
+        print(dt.datetime.now().strftime("%H:%M"), "Model saved in path: %s" % save_path)
 
 # show optimization progress
 _, ax = plt.subplots()
