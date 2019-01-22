@@ -78,6 +78,21 @@ with tf.Session() as sess:
     errs = []
     false_pos = []
     false_neg = []
+
+    ############
+    tmp = 0
+    n_orig = int(n_t * (1 - gen_share))
+    dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
+                       np.zeros((batch_size - n_orig, 784)), axis=0)
+    lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
+    val = sess.run(d_x, feed_dict={
+        x_placeholder: np.reshape(dt_tmp, newshape=[batch_size, im_dim, im_dim, channel]),
+        y_placeholder: lb_tmp})
+    for k in range(batch_size):
+        if val[k, 0] <= validation_crit_val and k < n_orig:
+            tmp += 1
+    print(tmp / n_orig)
+    ############
     for trial in range(n_trials):
         indices = np.random.randint(low=int(n_t * (1 - gen_share))+data_shift, high=len(y_train), size=int(n_t * gen_share))
         additional_y_train = y_train[indices, :]

@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-noise_norms = [5., 15.]
+noise_norms = [3., 13.]
 im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/'
 
 (x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.mnist.load_data()
