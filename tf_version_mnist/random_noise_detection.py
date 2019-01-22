@@ -2,9 +2,10 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import sklearn.svm as svm
+import matplotlib.pyplot as plt
 
 
-n_trials = 1000             # number of trials
+n_trials = 100             # number of trials
 n_t = 100                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
@@ -12,7 +13,7 @@ y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
-noise_norm = 0.25           # norm of a random noise
+noise_norm = 5.           # norm of a random noise
 data_shift = 0
 validation_crit_val = 3.17
 skip_validation = False
@@ -83,7 +84,8 @@ with tf.Session() as sess:
         additional_y_train = y_train[indices, :]
         noise = np.random.uniform(low=-1., high=1., size=(int(n_t * gen_share), 784))
         # normalize noise
-        noise = (noise/np.linalg.norm(noise))*(int(n_t * gen_share)*noise_norm)
+        noise = np.array([(noise[i]/np.linalg.norm(noise[i]))*noise_norm for i in range(len(noise))])
+        #noise = (noise/np.linalg.norm(noise))*(int(n_t * gen_share)*noise_norm)
         additional_x_train = np.reshape(x_train[indices, :, :], (-1, 784)) + noise
 
         train_data_tmp = np.append(np.reshape(x_train[data_shift:int(n_t*(1-gen_share))+data_shift], newshape=(-1, 784)),
@@ -126,6 +128,15 @@ with tf.Session() as sess:
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
 
+# show noisy images
+fig = plt.figure(figsize=(2, 2))
+columns = 2
+rows = 2
+for i in range(1, columns*rows + 1):
+    img = np.reshape(additional_x_train[-i-1], newshape=(28, 28))
+    fig.add_subplot(rows, columns, i)
+    plt.imshow(img, cmap='gray_r')
+plt.show()
 
 print('error=', np.mean(errs)*100, '+-', (np.std(errs)*1.96/np.sqrt(n_trials))*100)
 
