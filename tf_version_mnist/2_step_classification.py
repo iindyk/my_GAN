@@ -14,10 +14,10 @@ im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
 sample_from_orig = False     # sample generated data from original
 data_shift = 0
-validation_crit_val = 3.17
+validation_crit_val = 3.69
 skip_validation = False
-labels_to_use = [0, 1]
-model_to_load = '01-15_18:47_10.0'
+labels_to_use = [5, 6]
+model_to_load = '01-17_15:41_0.75'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
@@ -76,24 +76,21 @@ with tf.Session() as sess:
     print("Model restored.")
 
     errs = []
-    false_pos = []
     false_neg = []
 
-    ############
-    tmp = 0
-    n_orig = int(n_t * (1 - gen_share))
-    dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
-                       np.zeros((batch_size - n_orig, 784)), axis=0)
-    lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
+    # false positive rate calculation
+    false_pos = 0
+    _dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
+                        np.zeros((batch_size - n_orig, 784)), axis=0)
+    _lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
     val = sess.run(d_x, feed_dict={
-        x_placeholder: np.reshape(dt_tmp, newshape=[batch_size, im_dim, im_dim, channel]),
-        y_placeholder: lb_tmp})
+        x_placeholder: np.reshape(_dt_tmp, newshape=[batch_size, im_dim, im_dim, channel]),
+        y_placeholder: _lb_tmp})
     for k in range(batch_size):
         if val[k, 0] <= validation_crit_val and k < n_orig:
-            tmp += 1
-    print(tmp / n_orig)
-    ############
-    for trial in range(n_trials):
+            false_pos += 1
+
+for trial in range(n_trials):
         indices = np.random.randint(low=int(n_t * (1 - gen_share))+data_shift, high=len(y_train), size=int(n_t * gen_share))
         additional_y_train = y_train[indices, :]
         if sample_from_orig:
@@ -121,7 +118,6 @@ with tf.Session() as sess:
         train_data = []
         train_labels = []
 
-        false_pos.append(0)
         false_neg.append(0)
 
         # validation
@@ -159,6 +155,5 @@ print('error=', np.mean(errs)*100, '+-', (np.std(errs)*1.96/np.sqrt(n_trials))*1
 if not skip_validation:
     print('false negative=', (np.mean(false_neg)/(n_t*gen_share))*100,
           '+-', (np.std(false_neg)*100/(n_t*gen_share))*1.96/np.sqrt(n_trials))
-    print('false positive=', (np.mean(false_pos)/(n_t*(1-gen_share)))*100,
-          '+-', (np.std(false_pos)*100/(n_t*(1-gen_share)))*1.96/np.sqrt(n_trials))
+    print('false positive=', false_pos / n_orig * 100)
 
