@@ -4,7 +4,7 @@ import tensorflow as tf
 import sklearn.svm as svm
 
 
-n_trials = 1000             # number of trials
+n_trials = 1             # number of trials
 n_t = 100                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
@@ -12,12 +12,12 @@ y_dim = 2                   # number of classes
 channel = 1                 # number of channels, MNIST is grayscale
 im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
-sample_from_orig = False     # sample generated data from original
+sample_from_orig = False    # sample generated data from original
 data_shift = 0
-validation_crit_val = 3.69
+validation_crit_val = 3.1
 skip_validation = False
-labels_to_use = [5, 6]
-model_to_load = '01-17_15:41_0.75'
+labels_to_use = [0, 1]
+model_to_load = '01-15_18:47_10.0'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
@@ -90,7 +90,7 @@ with tf.Session() as sess:
         if val[k, 0] <= validation_crit_val and k < n_orig:
             false_pos += 1
 
-for trial in range(n_trials):
+    for trial in range(n_trials):
         indices = np.random.randint(low=int(n_t * (1 - gen_share))+data_shift, high=len(y_train), size=int(n_t * gen_share))
         additional_y_train = y_train[indices, :]
         if sample_from_orig:
@@ -135,7 +135,7 @@ for trial in range(n_trials):
                 y_placeholder: y_batch})
             for k in range(batch_size):
                 if k+j*batch_size < n_t:
-                    was_generated = (k+j*batch_size > int(n_t*(1-gen_share))) and not sample_from_orig
+                    was_generated = (k+j*batch_size >= int(n_t*(1-gen_share))) and not sample_from_orig
                     validation_success = stat_vals[k, 0] > validation_crit_val or skip_validation
                     if validation_success:
                         train_data.append(np.reshape(x_batch[k], newshape=784))
@@ -143,8 +143,6 @@ for trial in range(n_trials):
 
                     if validation_success and was_generated:
                         false_neg[trial] += 1
-                    if not validation_success and not was_generated:
-                        false_pos[trial] += 1
 
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
