@@ -3,10 +3,10 @@ from utils import *
 
 class Discriminator:
 
-    def __init__(self, batch_size, y_dim, c_dim):
+    def __init__(self, batch_size, y_dim):
         self.batch_size = batch_size
         self.y_dim = y_dim
-        self.c_dim = c_dim      # color scale of image
+        self.c_dim = 3      # color scale of image
         self.df_dim = 64
         self.dfc_dim = 1024
 
