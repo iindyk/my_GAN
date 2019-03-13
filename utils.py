@@ -214,8 +214,8 @@ def fully_connect(input_, output_size, scope=None, with_w=False,
             return tf.matmul(input_, matrix) + bias
 
 
-def batch_normal(inp, scope="scope" , reuse=False):
-    return batch_norm(inp, epsilon=1e-5, decay=0.9 , scale=True, scope=scope , reuse = reuse , updates_collections=None)
+def batch_normal(inp, scope="scope", reuse=False):
+    return batch_norm(inp, epsilon=1e-5, decay=0.9, scale=True, scope=scope, reuse=reuse, updates_collections=None)
 
 
 def conv2d_1(input_, output_dim,
@@ -276,3 +276,22 @@ def jacobian(y, x):
         print(dt.datetime.now().strftime("%m-%d %H:%M"), ': Jacobian construction finished!')
         jac = tf.stack(jac_list)
         return tf.reshape(jac, shape=tf.concat([shape, len(x)], axis=0))
+
+
+def linear(input_, output_size, scope=None, stddev=0.02, bias_start=0.0, with_w=False):
+    shape = input_.get_shape().as_list()
+
+    with tf.variable_scope(scope or "Linear"):
+        try:
+            matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
+                        tf.random_normal_initializer(stddev=stddev))
+        except ValueError as err:
+            msg = "NOTE: Usually, this is due to an issue with the image dimensions. " \
+                  "Did you correctly set '--crop' or '--input_height' or '--output_height'?"
+            err.args = err.args + (msg,)
+            raise
+        bias = tf.get_variable("bias", [output_size], initializer=tf.constant_initializer(bias_start))
+        if with_w:
+            return tf.matmul(input_, matrix) + bias, matrix, bias
+        else:
+            return tf.matmul(input_, matrix) + bias
