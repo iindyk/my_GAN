@@ -219,12 +219,11 @@ def batch_normal(inp, scope="scope", reuse=False):
 
 
 def conv2d_1(input_, output_dim,
-           k_h=3, k_w=3, d_h=2, d_w=2,
-           name="conv2d"):
+             k_h=3, k_w=3, d_h=2, d_w=2,
+             name="conv2d"):
     with tf.variable_scope(name):
-
         w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
-                            initializer= variance_scaling_initializer())
+                            initializer=variance_scaling_initializer())
         conv = tf.nn.conv2d(input_, w, strides=[1, d_h, d_w, 1], padding='SAME')
 
         biases = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
@@ -234,13 +233,12 @@ def conv2d_1(input_, output_dim,
 
 
 def de_conv(input_, output_shape,
-             k_h=3, k_w=3, d_h=2, d_w=2, stddev=0.02, name="deconv2d",
-             with_w=False, initializer = variance_scaling_initializer()):
-
+            k_h=3, k_w=3, d_h=2, d_w=2, stddev=0.02, name="deconv2d",
+            with_w=False, initializer=variance_scaling_initializer()):
     with tf.variable_scope(name):
         # filter : [height, width, output_channels, in_channels]
         w = tf.get_variable('w', [k_h, k_w, output_shape[-1], input_.get_shape()[-1]],
-                            initializer = initializer)
+                            initializer=initializer)
         try:
             deconv = tf.nn.conv2d_transpose(input_, w, output_shape=output_shape,
                                             strides=[1, d_h, d_w, 1])
@@ -269,9 +267,9 @@ def jacobian(y, x):
         for i in range(n):
             jac_list.append(tf.gradients(y_list[i], x))
             if tmp_progress > 0.1:
-                print(dt.datetime.now().strftime("%m-%d %H:%M"), ': ', int(100*i/n), '%')
+                print(dt.datetime.now().strftime("%m-%d %H:%M"), ': ', int(100 * i / n), '%')
                 tmp_progress = 0
-            tmp_progress += 1./n
+            tmp_progress += 1. / n
 
         print(dt.datetime.now().strftime("%m-%d %H:%M"), ': Jacobian construction finished!')
         jac = tf.stack(jac_list)
@@ -284,7 +282,7 @@ def linear(input_, output_size, scope=None, stddev=0.02, bias_start=0.0, with_w=
     with tf.variable_scope(scope or "Linear"):
         try:
             matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
-                        tf.random_normal_initializer(stddev=stddev))
+                                     tf.random_normal_initializer(stddev=stddev))
         except ValueError as err:
             msg = "NOTE: Usually, this is due to an issue with the image dimensions. " \
                   "Did you correctly set '--crop' or '--input_height' or '--output_height'?"
@@ -321,3 +319,17 @@ def deconv2d(input_, output_shape,
             return deconv, w, biases
         else:
             return deconv
+
+
+def conv2d_2(input_, output_dim,
+             k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
+             name="conv2d"):
+    with tf.variable_scope(name):
+        w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
+                            initializer=tf.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.conv2d(input_, w, strides=[1, d_h, d_w, 1], padding='SAME')
+
+        biases = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
+        conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
+
+        return conv

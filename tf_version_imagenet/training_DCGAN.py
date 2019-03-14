@@ -7,13 +7,13 @@ import os
 import resource
 
 
-nit = 1000              # number of training iterations
+nit = 5000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
 momentum = 0.2          # parameter for momentum learning rule
 z_dim = 100             # generator input dimension
-batch_size = 32         # size of training sample used for training
+batch_size = 64         # size of training sample used for training
 im_dim = 32             # one-side dimension of square image
 save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/'
@@ -153,15 +153,16 @@ with tf.Session() as sess:
         g_losses.append(g_loss_val)
 
         if (epoch + 1) % display_step == 0:
-            print("Epoch:", '%04d' % (epoch + 1), " discriminator loss=", "{:.9f}".format(d_loss_val),
+            print(dt.datetime.now().strftime("%H:%M"), "Epoch:", '%04d' % (epoch + 1),
+                  " discriminator loss=", "{:.9f}".format(d_loss_val),
                   " generator loss=", "{:.9f}".format(g_loss_val))
 
         if (epoch + 1) % save_image_step == 0:
             sample_image = generator.act(z_placeholder, y_placeholder, reuse=True)
             temp = sess.run(sample_image, feed_dict={z_placeholder: z_batch, y_placeholder: real_labels_batch})
-            img_array = temp[0, :, :, 0]
+            img_array = temp[0, :, :, :]
             plt.imsave('/home/iindyk/PycharmProjects/my_GAN/images/generated'+str(epoch+1)+'.jpeg',
-                       img_array, cmap='gray_r')
+                       img_array)
     if save_model:
         # Save model
         time = dt.datetime.now().strftime("%m-%d_%H:%M")

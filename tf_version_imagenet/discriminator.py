@@ -17,11 +17,11 @@ class Discriminator:
             yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
             x = conv_cond_concat(x, yb)
 
-            _conv1, _ = conv2d_1(x, self.c_dim + self.y_dim, name='dis_h0_conv')
+            _conv1 = conv2d_2(x, self.c_dim + self.y_dim, name='dis_h0_conv')
             h0 = tf.nn.leaky_relu(_conv1)
             h0 = conv_cond_concat(h0, yb)
 
-            h1 = tf.nn.leaky_relu(batch_normal(conv2d(h0, self.df_dim + self.y_dim), scope='dis_h1_conv'))
+            h1 = tf.nn.leaky_relu(batch_normal(conv2d_2(h0, self.df_dim + self.y_dim), scope='dis_h1_conv'))
             h1 = tf.reshape(h1, [self.batch_size, -1])
             h1 = tf.concat([h1, y], 1)
 

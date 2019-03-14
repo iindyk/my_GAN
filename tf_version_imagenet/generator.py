@@ -9,10 +9,10 @@ class Generator:
         self.y_dim = y_dim
         self.output_size = output_size
         self.channel = channel
-        self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
-        self.initial_y_train = [(1. if initial_y_train[j, 0] == 1. else -1.) for j in range(len(initial_y_train))]
-        self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
-        self.y_test = [(1. if y_test[j, 0] == 1. else -1.) for j in range(len(y_test))]
+        #self.initial_x_train = np.reshape(initial_x_train, newshape=(len(initial_y_train), 784))
+        #self.initial_y_train = [(1. if initial_y_train[j, 0] == 1. else -1.) for j in range(len(initial_y_train))]
+        #self.x_test = np.reshape(x_test, newshape=(len(x_test), 784))
+        #self.y_test = [(1. if y_test[j, 0] == 1. else -1.) for j in range(len(y_test))]
         self.prob_approx = 0.
         self.a = 1.
         self.alpha = alpha
@@ -35,21 +35,21 @@ class Generator:
             z = tf.concat([z, y], 1)
 
             h0 = tf.nn.relu(
-                batch_normal(linear(z, self.gfc_dim, scope='g_h0_lin')), scope='g_bn0')
+                batch_normal(linear(z, self.gfc_dim, scope='gen_h0_lin'), scope='gen_bn0'))
             h0 = tf.concat([h0, y], 1)
 
             h1 = tf.nn.relu(batch_normal(
-                linear(h0, self.gf_dim * 2 * s_h4 * s_w4, 'g_h1_lin'), scope='gen_bn1'))
+                linear(h0, self.gf_dim * 2 * s_h4 * s_w4, 'gen_h1_lin'), scope='gen_bn1'))
             h1 = tf.reshape(h1, [self.batch_size, s_h4, s_w4, self.gf_dim * 2])
 
             h1 = conv_cond_concat(h1, yb)
 
-            h2 = tf.nn.relu(batch_normal(deconv2d(h1, [self.batch_size, s_h2, s_w2, self.gf_dim * 2], name='g_h2'),
+            h2 = tf.nn.relu(batch_normal(deconv2d(h1, [self.batch_size, s_h2, s_w2, self.gf_dim * 2], name='gen_h2'),
                                          scope='gen_bn2'))
             h2 = conv_cond_concat(h2, yb)
 
             return tf.nn.sigmoid(
-                deconv2d(h2, [self.batch_size, s_h, s_w, self.c_dim], name='g_h3'))
+                deconv2d(h2, [self.batch_size, s_h, s_w, self.c_dim], name='gen_h3'))
 
     def adv_obj_and_grad(self, d_generated, labels):
         # todo
