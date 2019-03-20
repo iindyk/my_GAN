@@ -16,8 +16,8 @@ class Generator:
         self.prob_approx = 0.
         self.a = 1.
         self.alpha = alpha
-        self.output_height = 32
-        self.output_width = 32
+        self.output_height = 64
+        self.output_width = 64
         self.c_dim = 3
         self.gfc_dim = 1024
         self.gf_dim = 64

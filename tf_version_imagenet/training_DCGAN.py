@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 import os
 import resource
+import pickle
 
 
 nit = 5000              # number of training iterations
@@ -19,7 +20,7 @@ save_model = True       # if save_model generator and discriminator will be save
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/'
 y_dim = 3               # number of classes used for training
 channel = 3             # number of channels of image
-labels_to_use = [0, 1, 2]
+labels_to_use = [1, 10, 999]
 
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
@@ -32,36 +33,42 @@ print('Soft RAM limit set to:', soft/(1024**3), 'GB')
 tf.reset_default_graph()
 
 # uploading data
-(x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.cifar10.load_data()
-x_train_all, x_test_all = x_train_all/255., x_test_all/255.
-x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
+#(x_train_all, y_train_all), (x_test_all, y_test_all) = tf.keras.datasets.cifar10.load_data()
+#x_train_all, x_test_all = x_train_all/255., x_test_all/255.
+#x_train_all, x_test_all = x_train_all-np.mean(x_train_all), x_test_all-np.mean(x_test_all)
+
+f_read1 = open("/home/iindyk/PycharmProjects/my_GAN/ImageNet/data.p", "rb")
+exist_data = pickle.load(f_read1)
+f_read1.close()
+x_train_all = exist_data['train_data']
+y_train_all = exist_data['train_labels']
 
 # take only images of digits from labels_to_use
 x_train = []
 y_train = []
 for i in range(len(y_train_all)):
     if y_train_all[i] == labels_to_use[0]:
-        x_train.append(x_train_all[i])
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
         y_train.append([1., 0., 0.])
     elif y_train_all[i] == labels_to_use[1]:
-        x_train.append(x_train_all[i])
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
         y_train.append([0., 1., 0.])
     elif y_train_all[i] == labels_to_use[2]:
-        x_train.append(x_train_all[i])
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
         y_train.append([0., 0., 1.])
 
-x_test = []
-y_test = []
-for i in range(len(y_test_all)):
-    if y_test_all[i] == labels_to_use[0]:
-        x_test.append(x_test_all[i])
-        y_test.append([1., 0., 0.])
-    elif y_test_all[i] == labels_to_use[1]:
-        x_test.append(x_test_all[i])
-        y_test.append([0., 1., 0.])
-    elif y_test_all[i] == labels_to_use[2]:
-        x_test.append(x_test_all[i])
-        y_test.append([0., 0., 1.])
+#x_test = []
+#y_test = []
+#for i in range(len(y_test_all)):
+#    if y_test_all[i] == labels_to_use[0]:
+#        x_test.append(x_test_all[i])
+#        y_test.append([1., 0., 0.])
+#    elif y_test_all[i] == labels_to_use[1]:
+#        x_test.append(x_test_all[i])
+#        y_test.append([0., 1., 0.])
+#    elif y_test_all[i] == labels_to_use[2]:
+#        x_test.append(x_test_all[i])
+#        y_test.append([0., 0., 1.])
 
 
 x_train = np.array(x_train, dtype=np.float32)
