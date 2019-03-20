@@ -14,8 +14,8 @@ save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
 momentum = 0.2          # parameter for momentum learning rule
 z_dim = 100             # generator input dimension
-batch_size = 64         # size of training sample used for training
-im_dim = 32             # one-side dimension of square image
+batch_size = 32         # size of training sample used for training
+im_dim = 64             # one-side dimension of square image
 save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/'
 y_dim = 3               # number of classes used for training
@@ -25,7 +25,7 @@ labels_to_use = [1, 10, 999]
 # setting max heap size limit
 rsrc = resource.RLIMIT_DATA
 _, hard = resource.getrlimit(rsrc)
-resource.setrlimit(rsrc, ((1024**3)*8, hard))
+resource.setrlimit(rsrc, ((1024**3)*10, hard))
 soft, hard = resource.getrlimit(rsrc)
 print('Soft RAM limit set to:', soft/(1024**3), 'GB')
 
@@ -48,13 +48,13 @@ x_train = []
 y_train = []
 for i in range(len(y_train_all)):
     if y_train_all[i] == labels_to_use[0]:
-        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1)/255.)
         y_train.append([1., 0., 0.])
     elif y_train_all[i] == labels_to_use[1]:
-        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1)/255.)
         y_train.append([0., 1., 0.])
     elif y_train_all[i] == labels_to_use[2]:
-        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1))
+        x_train.append(np.swapaxes(np.reshape(np.array(x_train_all[i]), newshape=(64, 64, 3), order='F'), 0, 1)/255.)
         y_train.append([0., 0., 1.])
 
 #x_test = []
