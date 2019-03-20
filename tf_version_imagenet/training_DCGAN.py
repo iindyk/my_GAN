@@ -8,13 +8,13 @@ import resource
 import pickle
 
 
-nit = 5000              # number of training iterations
+nit = 3000              # number of training iterations
 display_step = 500      # progress display step
 save_image_step = 500   # generated image save step (in save_dir folder)
 learning_rate = 0.02    # gradient descent learning step
 momentum = 0.2          # parameter for momentum learning rule
 z_dim = 100             # generator input dimension
-batch_size = 32         # size of training sample used for training
+batch_size = 64         # size of training sample used for training
 im_dim = 64             # one-side dimension of square image
 save_model = True       # if save_model generator and discriminator will be saved in save_dir folder
 save_dir = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/'

@@ -12,7 +12,7 @@ y_dim = 3
 channel = 3
 im_dim = 64
 labels_to_use = [1, 10, 999]
-model_to_load = '03-20_16:35'
+model_to_load = '03-20_18:26'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/' + model_to_load + '/model.ckpt'
 generated_images_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_DCGAN_imagenet/' \
                         + model_to_load + '/generated_images'
