@@ -46,7 +46,7 @@ def merge(images, size):
 
     for idx, image in enumerate(images):
         i = idx % size[1]
-        j = idx / size[1]
+        j = idx // size[1]
         img[j*h:j*h+h, i*w:i*w+w, :] = image
 
     return img
@@ -166,9 +166,14 @@ def visualize(sess, dcgan, config, option):
   option = 0
   if option == 0:
     all_samples = []
-    for i in range(484):
+    #484
+    for i in range(10):
       print(i)
-      samples = sess.run(dcgan.G)
+      #samples = sess.run(dcgan.G)
+      #
+      G, zs = dcgan.generator(is_ref=False)
+      samples = sess.run(G)
+      #
       all_samples.append(samples)
     samples = np.concatenate(all_samples, 0)
     n = int(np.sqrt(samples.shape[0]))
