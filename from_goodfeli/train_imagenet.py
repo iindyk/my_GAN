@@ -22,8 +22,8 @@ flags.DEFINE_integer("image_width", 64, "The width of the images presented to th
 flags.DEFINE_string("dataset", "celebA", "The name of dataset [celebA, mnist, lsun]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
-flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
-flags.DEFINE_boolean("is_crop", False, "True for training, False for testing [False]")
+flags.DEFINE_boolean("is_train", True, "True for training, False for testing [False]")
+flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
 FLAGS = flags.FLAGS
 
 
@@ -40,7 +40,7 @@ def main(_):
         if FLAGS.dataset == 'mnist':
             assert False
         dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size,
-                      sample_size=64,
+                      sample_size=128,
                       z_dim=8192,
                       d_label_smooth=.25,
                       generator_target_prob=.75 / 2.,
@@ -51,7 +51,7 @@ def main(_):
                       sample_dir=FLAGS.sample_dir,
                       generator=Generator(),
                       train_func=train, discriminator_func=discriminator,
-                      build_model_func=build_model_single_gpu, config=FLAGS,
+                      build_model_func=build_model, config=FLAGS,
                       devices=["gpu:0"]  # , ", "gpu:1", "gpu:2", "gpu:3", gpu:4"]
                       )
 

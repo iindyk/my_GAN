@@ -28,8 +28,10 @@ def build_model(self):
                     tf.get_variable_scope().reuse_variables()
     avg_d_grads = avg_grads(all_d_grads)
     avg_g_grads = avg_grads(all_g_grads)
-    self.d_optim = d_opt.apply_gradients(avg_d_grads)
-    self.g_optim = g_opt.apply_gradients(avg_g_grads)
+    ##
+    with tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE) as vscope:
+        self.d_optim = d_opt.apply_gradients(avg_d_grads)
+        self.g_optim = g_opt.apply_gradients(avg_g_grads)
 
 
 def build_model_single_gpu(self, gpu_idx=0):

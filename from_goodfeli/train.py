@@ -18,7 +18,7 @@ def train(self, config):
     #    self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
     # self.d_sum = tf.merge_summary([#self.z_sum,
     #     self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-    self.writer = tf.train.SummaryWriter("./logs", self.sess.graph_def)
+    self.writer = tf.summary.FileWriter("./logs", self.sess.graph_def)
 
 
     coord = tf.train.Coordinator()
