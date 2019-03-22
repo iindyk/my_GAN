@@ -46,7 +46,10 @@ def merge(images, size):
 
     for idx, image in enumerate(images):
         i = idx % size[1]
-        j = idx // size[1]
+        if idx == (idx // size[1]) * size[1] and idx != 0:
+            j = idx // size[1] - 1
+        else:
+            j = idx // size[1]
         try:
             img[j*h:j*h+h, i*w:i*w+w, :] = image
         except ValueError:

@@ -34,7 +34,7 @@ def build_model(self):
         self.g_optim = g_opt.apply_gradients(avg_g_grads)
 
 
-def build_model_single_gpu(self, gpu_idx=0):
+def build_model_single_gpu(self, gpu_idx):
     assert not self.y_dim
 
     if gpu_idx == 0:
