@@ -14,7 +14,7 @@ import tensorflow as tf
 
 pp = pprint.PrettyPrinter()
 
-get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
+get_stddev = lambda x, k_h, k_w: 1 / math.sqrt(k_w * k_h * x.get_shape()[-1])
 
 index = 0
 
@@ -51,39 +51,39 @@ def merge(images, size):
         else:
             j = idx // size[1]
         try:
-            img[j*h:j*h+h, i*w:i*w+w, :] = image
+            img[j * h:j * h + h, i * w:i * w + w, :] = image
         except ValueError:
-            print(img.shape, i, j)
-
+            # print(img.shape, i, j)
+            pass
     return img
 
 
 def imsave(images, size, path):
+    print('sample saved')
     return scipy.misc.imsave(path, merge(images, size))
 
 
 def center_crop(x, crop_h, crop_w=None, resize_w=64):
-
     h, w = x.shape[:2]
     crop_h = min(h, w)  # we changed this to override the original DCGAN-TensorFlow behavior
-                        # Just use as much of the image as possible while keeping it square
+    # Just use as much of the image as possible while keeping it square
 
     if crop_w is None:
         crop_w = crop_h
-    j = int(round((h - crop_h)/2.))
-    i = int(round((w - crop_w)/2.))
-    return scipy.misc.imresize(x[j:j+crop_h, i:i+crop_w],
+    j = int(round((h - crop_h) / 2.))
+    i = int(round((w - crop_w) / 2.))
+    return scipy.misc.imresize(x[j:j + crop_h, i:i + crop_w],
                                [resize_w, resize_w])
 
 
 def transform(image, npx=64, is_crop=True, resize_w=64):
     # npx : # of pixels width/height of image
     cropped_image = center_crop(image, npx, resize_w=resize_w)
-    return np.array(cropped_image)/127.5 - 1.
+    return np.array(cropped_image) / 127.5 - 1.
 
 
 def inverse_transform(images):
-    return (images+1.)/2.
+    return (images + 1.) / 2.
 
 
 def to_json(output_path, *layers):
@@ -102,7 +102,7 @@ def to_json(output_path, *layers):
                 depth = W.shape[0]
 
             biases = {"sy": 1, "sx": 1, "depth": depth, "w": ['%.2f' % elem for elem in list(B)]}
-            if bn != None:
+            if bn is not None:
                 gamma = bn.gamma.eval()
                 beta = bn.beta.eval()
 
@@ -132,7 +132,8 @@ def to_json(output_path, *layers):
             else:
                 fs = []
                 for w_ in W:
-                    fs.append({"sy": 5, "sx": 5, "depth": W.shape[3], "w": ['%.2f' % elem for elem in list(w_.flatten())]})
+                    fs.append(
+                        {"sy": 5, "sx": 5, "depth": W.shape[3], "w": ['%.2f' % elem for elem in list(w_.flatten())]})
 
                 lines += """
                     var layer_%s = {
@@ -145,117 +146,118 @@ def to_json(output_path, *layers):
                         "gamma": %s,
                         "beta": %s,
                         "filters": %s
-                    };""" % (layer_idx, 2**(int(layer_idx)+2), 2**(int(layer_idx)+2),
+                    };""" % (layer_idx, 2 ** (int(layer_idx) + 2), 2 ** (int(layer_idx) + 2),
                              W.shape[0], W.shape[3], biases, gamma, beta, fs)
-        layer_f.write(" ".join(lines.replace("'","").split()))
+        layer_f.write(" ".join(lines.replace("'", "").split()))
 
 
 def make_gif(images, fname, duration=2, true_image=False):
-  import moviepy.editor as mpy
+    import moviepy.editor as mpy
 
-  def make_frame(t):
-    try:
-      x = images[int(len(images)/duration*t)]
-    except:
-      x = images[-1]
+    def make_frame(t):
+        try:
+            x = images[int(len(images) / duration * t)]
+        except:
+            x = images[-1]
 
-    if true_image:
-      return x.astype(np.uint8)
-    else:
-      return ((x+1)/2*255).astype(np.uint8)
+        if true_image:
+            return x.astype(np.uint8)
+        else:
+            return ((x + 1) / 2 * 255).astype(np.uint8)
 
-  clip = mpy.VideoClip(make_frame, duration=duration)
-  clip.write_gif(fname, fps = len(images) / duration)
+    clip = mpy.VideoClip(make_frame, duration=duration)
+    clip.write_gif(fname, fps=len(images) / duration)
 
 
 def visualize(sess, dcgan, config, option):
-  option = 0
-  if option == 0:
-    all_samples = []
-    #484
-    for i in range(10):
-      print(i)
-      #samples = sess.run(dcgan.G)
-      #
-      G, zs = dcgan.generator(is_ref=False)
-      samples = sess.run(G)
-      #
-      all_samples.append(samples)
-    samples = np.concatenate(all_samples, 0)
-    n = int(np.sqrt(samples.shape[0]))
-    m = samples.shape[0] // n
-    save_images(samples, [m, n], './' + config.sample_dir + '/test.png')#_%s.png' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-  elif option == 5:
-    counter = 0
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord=coord)
-    while counter < 1005:
-        print(counter)
-        samples, fake = sess.run([dcgan.G, dcgan.d_loss_class])
-        fake = np.argsort(fake)
-        print(np.sum(samples))
-        print(fake)
-        for i in range(samples.shape[0]):
-            name = "%s%d.png" % (chr(ord('a') + counter % 10), counter)
-            img = np.expand_dims(samples[fake[i]], 0)
-            if counter >= 1000:
-                save_images(img, [1, 1], './' + config.sample_dir + '/turk/fake%d.png' % (counter - 1000))
+    option = 0
+    if option == 0:
+        all_samples = []
+        # 484
+        for i in range(10):
+            print(i)
+            # samples = sess.run(dcgan.G)
+            #
+            G, zs = dcgan.generator(is_ref=False)
+            samples = sess.run(G)
+            #
+            all_samples.append(samples)
+        samples = np.concatenate(all_samples, 0)
+        n = int(np.sqrt(samples.shape[0]))
+        m = samples.shape[0] // n
+        save_images(samples, [m, n],
+                    './' + config.sample_dir + '/test.png')  # _%s.png' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    elif option == 5:
+        counter = 0
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
+        while counter < 1005:
+            print(counter)
+            samples, fake = sess.run([dcgan.G, dcgan.d_loss_class])
+            fake = np.argsort(fake)
+            print(np.sum(samples))
+            print(fake)
+            for i in range(samples.shape[0]):
+                name = "%s%d.png" % (chr(ord('a') + counter % 10), counter)
+                img = np.expand_dims(samples[fake[i]], 0)
+                if counter >= 1000:
+                    save_images(img, [1, 1], './' + config.sample_dir + '/turk/fake%d.png' % (counter - 1000))
+                else:
+                    save_images(img, [1, 1], './' + config.sample_dir + '/turk/%s' % (name))
+                counter += 1
+    elif option == 1:
+        values = np.arange(0, 1, 1. / config.batch_size)
+        for idx in range(100):
+            print(" [*] %d" % idx)
+            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+            for kdx, z in enumerate(z_sample):
+                z[idx] = values[kdx]
+
+            samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
+            save_images(samples, [8, 8], './' + options.sample_dir + '/test_arange_%s.png' % (idx))
+    elif option == 2:
+        values = np.arange(0, 1, 1. / config.batch_size)
+        for idx in [random.randint(0, 99) for _ in range(100)]:
+            print(" [*] %d" % idx)
+
+            if hasattr(dcgan, z):
+                z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
+                z_sample = np.tile(z, (config.batch_size, 1))
+            # z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+            for kdx, z in enumerate(z_sample):
+                z[idx] = values[kdx]
+
+            if hasattr(dcgan, "sampler"):
+                sampler = dcgan.sampler
             else:
-                save_images(img, [1, 1], './' + config.sample_dir + '/turk/%s' % (name))
-            counter += 1
-  elif option == 1:
-    values = np.arange(0, 1, 1./config.batch_size)
-    for idx in range(100):
-      print(" [*] %d" % idx)
-      z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-      for kdx, z in enumerate(z_sample):
-        z[idx] = values[kdx]
+                sampler = dcgan.G
+            samples = sess.run(sampler, feed_dict={dcgan.z: z_sample})
+            make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
+    elif option == 3:
+        values = np.arange(0, 1, 1. / config.batch_size)
+        for idx in range(100):
+            print(" [*] %d" % idx)
+            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+            for kdx, z in enumerate(z_sample):
+                z[idx] = values[kdx]
 
-      samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-      save_images(samples, [8, 8], './' + options.sample_dir + '/test_arange_%s.png' % (idx))
-  elif option == 2:
-    values = np.arange(0, 1, 1./config.batch_size)
-    for idx in [random.randint(0, 99) for _ in range(100)]:
-      print(" [*] %d" % idx)
+            samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
+            make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
+    elif option == 4:
+        image_set = []
+        values = np.arange(0, 1, 1. / config.batch_size)
 
-      if hasattr(dcgan, z):
-        z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
-        z_sample = np.tile(z, (config.batch_size, 1))
-      #z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-      for kdx, z in enumerate(z_sample):
-        z[idx] = values[kdx]
+        for idx in range(100):
+            print(" [*] %d" % idx)
+            z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+            for kdx, z in enumerate(z_sample): z[idx] = values[kdx]
 
-      if hasattr(dcgan, "sampler"):
-          sampler = dcgan.sampler
-      else:
-          sampler = dcgan.G
-      samples = sess.run(sampler, feed_dict={dcgan.z: z_sample})
-      make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
-  elif option == 3:
-    values = np.arange(0, 1, 1./config.batch_size)
-    for idx in range(100):
-      print(" [*] %d" % idx)
-      z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-      for kdx, z in enumerate(z_sample):
-        z[idx] = values[kdx]
+            image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
+            make_gif(image_set[-1], './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
 
-      samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-      make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
-  elif option == 4:
-    image_set = []
-    values = np.arange(0, 1, 1./config.batch_size)
-
-    for idx in range(100):
-      print(" [*] %d" % idx)
-      z_sample = np.zeros([config.batch_size, dcgan.z_dim])
-      for kdx, z in enumerate(z_sample): z[idx] = values[kdx]
-
-      image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
-      make_gif(image_set[-1], './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
-
-    new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10]) \
-        for idx in range(64) + range(63, -1, -1)]
-    make_gif(new_image_set, './' + config.sample_dir + '/test_gif_merged.gif', duration=8)
+        new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10]) \
+                         for idx in range(64) + range(63, -1, -1)]
+        make_gif(new_image_set, './' + config.sample_dir + '/test_gif_merged.gif', duration=8)
 
 
 def colorize(img):
