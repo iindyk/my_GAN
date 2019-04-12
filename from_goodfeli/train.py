@@ -3,6 +3,8 @@ from from_goodfeli.model import save_images
 import time
 import numpy as np
 
+save_after = 600
+
 
 def train(self, config):
     """Train DCGAN"""
@@ -110,7 +112,7 @@ def train(self, config):
                 save_images(samples, [8, 8],
                             self.sample_dir + '/train_%s.png' % (idx))
 
-            if time.time() - save_time > 3600:
+            if time.time() - save_time > save_after:
                 save_time = time.time()
                 self.save(config.checkpoint_dir, counter)
     except tf.errors.OutOfRangeError:
