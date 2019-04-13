@@ -11,8 +11,8 @@ from from_goodfeli.utils import pp, visualize, to_json
 
 flags = tf.app.flags
 # flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
-flags.DEFINE_float("discriminator_learning_rate", 0.0004, "Learning rate of for adam")
-flags.DEFINE_float("generator_learning_rate", 0.0004, "Learning rate of for adam")
+flags.DEFINE_float("discriminator_learning_rate", 0.00001, "Learning rate of for adam [0.0004]")
+flags.DEFINE_float("generator_learning_rate", 0.00001, "Learning rate of for adam [0.0004]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", 3900, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")

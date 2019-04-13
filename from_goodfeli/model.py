@@ -19,7 +19,7 @@ class DCGAN(object):
                  checkpoint_dir=None, sample_dir='samples',
                  generator=None,
                  generator_func=None, train=None, train_func=None,
-                 generator_cls = None,
+                 generator_cls=None,
                  discriminator_func=None,
                  encoder_func=None,
                  build_model=None,
@@ -149,9 +149,11 @@ class DCGAN(object):
         if self.disable_vbn:
             class Dummy(object):
                 def __init__(self, tensor, ignored, half):
-                    self.reference_output=tensor
+                    self.reference_output = tensor
+
                 def __call__(self, x):
                     return x
+
             VBN_cls = Dummy
         else:
             VBN_cls = VBN
@@ -166,9 +168,11 @@ class DCGAN(object):
         if self.disable_vbn:
             class Dummy(object):
                 def __init__(self, tensor, ignored, half):
-                    self.reference_output=tensor
+                    self.reference_output = tensor
+
                 def __call__(self, x):
                     return x
+
             VBN_cls = Dummy
         else:
             VBN_cls = VBNL
@@ -183,9 +187,11 @@ class DCGAN(object):
         if self.disable_vbn:
             class Dummy(object):
                 def __init__(self, tensor, ignored, half):
-                    self.reference_output=tensor
+                    self.reference_output = tensor
+
                 def __call__(self, x):
                     return x
+
             VBN_cls = Dummy
         else:
             VBN_cls = VBNLP
@@ -201,7 +207,6 @@ class DCGAN(object):
 
     def vbn2(self, tensor, name):
         return self.vbn(tensor, name, half=2)
-
 
     def save(self, checkpoint_dir, step):
         model_name = "DCGAN.model"
@@ -240,6 +245,7 @@ class BuildModel(object):
     dcgan: The DCGAN object to build within.
     func: The function to do it with.
     """
+
     def __init__(self, dcgan, func):
         self.dcgan = dcgan
         self.func = func
@@ -257,6 +263,7 @@ class Generator(object):
     dcgan: The DCGAN object to build the generator within.
     func: The function to do it with.
     """
+
     def __init__(self, dcgan, func):
         self.dcgan = dcgan
         self.func = func
@@ -274,6 +281,7 @@ class Discriminator(object):
     dcgan: The DCGAN object to build the discriminator within.
     func: The function to do it with.
     """
+
     def __init__(self, dcgan, func):
         self.dcgan = dcgan
         self.func = func
@@ -291,6 +299,7 @@ class Train(object):
     dcgan: The DCGAN object to train.
     func: The function to do it with.
     """
+
     def __init__(self, dcgan, func):
         self.dcgan = dcgan
         self.func = func
@@ -316,10 +325,10 @@ def read_and_decode(filename_queue):
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
     features = tf.parse_single_example(
-            serialized_example,
-            features={
-                'image_raw': tf.FixedLenFeature([], tf.string),
-            })
+        serialized_example,
+        features={
+            'image_raw': tf.FixedLenFeature([], tf.string),
+        })
 
     image = tf.decode_raw(features['image_raw'], tf.uint8)
     image.set_shape(64 * 64 * 3)
@@ -334,11 +343,11 @@ def read_and_decode_with_labels(filename_queue):
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
     features = tf.parse_single_example(
-            serialized_example,
-            features={
-                'image_raw': tf.FixedLenFeature([], tf.string),
-                'label' : tf.FixedLenFeature([], tf.int64)
-            })
+        serialized_example,
+        features={
+            'image_raw': tf.FixedLenFeature([], tf.string),
+            'label': tf.FixedLenFeature([], tf.int64)
+        })
 
     image = tf.decode_raw(features['image_raw'], tf.uint8)
     image.set_shape(64 * 64 * 3)
@@ -394,10 +403,10 @@ class VBNL(object):
                 half = x
             elif self.half == 1:
                 half = tf.slice(x, [0, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             elif self.half == 2:
                 half = tf.slice(x, [shape[0] // 2, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             else:
                 assert False
             self.mean = tf.reduce_mean(half, [0, 1, 2], keepdims=True)
@@ -441,11 +450,11 @@ class VBNL(object):
         shape = x.get_shape().as_list()
         assert len(shape) == 4
         self.gamma_driver = tf.get_variable("gamma_driver", [shape[-1]],
-                                initializer=tf.random_normal_initializer(0., 0.02))
+                                            initializer=tf.random_normal_initializer(0., 0.02))
         gamma = tf.exp(self.gamma_driver)
         gamma = tf.reshape(gamma, [1, 1, 1, -1])
         self.beta = tf.get_variable("beta", [shape[-1]],
-                                initializer=tf.constant_initializer(0.))
+                                    initializer=tf.constant_initializer(0.))
         beta = tf.reshape(self.beta, [1, 1, 1, -1])
         assert self.epsilon is not None
         assert mean_sq is not None
@@ -492,10 +501,10 @@ class VBNLP(object):
                 half = x
             elif self.half == 1:
                 half = tf.slice(x, [0, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             elif self.half == 2:
                 half = tf.slice(x, [shape[0] // 2, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             else:
                 assert False
             self.mean = tf.reduce_mean(half, [0], keepdims=True)
@@ -539,11 +548,11 @@ class VBNLP(object):
         shape = x.get_shape().as_list()
         assert len(shape) == 4
         self.gamma_driver = tf.get_variable("gamma_driver", shape[1:],
-                                initializer=tf.random_normal_initializer(0., 0.02))
+                                            initializer=tf.random_normal_initializer(0., 0.02))
         gamma = tf.exp(self.gamma_driver)
         gamma = tf.expand_dims(gamma, 0)
         self.beta = tf.get_variable("beta", shape[1:],
-                                initializer=tf.constant_initializer(0.))
+                                    initializer=tf.constant_initializer(0.))
         beta = tf.expand_dims(self.beta, 0)
         assert self.epsilon is not None
         assert mean_sq is not None
@@ -590,10 +599,10 @@ class VBN(object):
                 half = x
             elif self.half == 1:
                 half = tf.slice(x, [0, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             elif self.half == 2:
                 half = tf.slice(x, [shape[0] // 2, 0, 0, 0],
-                                      [shape[0] // 2, shape[1], shape[2], shape[3]])
+                                [shape[0] // 2, shape[1], shape[2], shape[3]])
             else:
                 assert False
             self.mean = tf.reduce_mean(half, [0, 1, 2], keepdims=True)
@@ -637,10 +646,10 @@ class VBN(object):
         shape = x.get_shape().as_list()
         assert len(shape) == 4
         self.gamma = tf.get_variable("gamma", [shape[-1]],
-                                initializer=tf.random_normal_initializer(1., 0.02))
+                                     initializer=tf.random_normal_initializer(1., 0.02))
         gamma = tf.reshape(self.gamma, [1, 1, 1, -1])
         self.beta = tf.get_variable("beta", [shape[-1]],
-                                initializer=tf.constant_initializer(0.))
+                                    initializer=tf.constant_initializer(0.))
         beta = tf.reshape(self.beta, [1, 1, 1, -1])
         assert self.epsilon is not None
         assert mean_sq is not None

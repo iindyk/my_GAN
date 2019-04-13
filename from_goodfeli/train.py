@@ -3,7 +3,7 @@ from from_goodfeli.model import save_images
 import time
 import numpy as np
 
-save_after = 600
+save_after = 300
 
 
 def train(self, config):
