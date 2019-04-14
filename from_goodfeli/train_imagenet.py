@@ -18,8 +18,8 @@ flags.DEFINE_integer("train_size", 3900, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
 flags.DEFINE_integer("image_size", 108,"The size of image to use (will be center cropped) [108] "
                      "(This one does not make any sense, it is not the size of the image presented to the model)")
-flags.DEFINE_integer("image_width", 64, "The width of the images presented to the model")
-flags.DEFINE_string("dataset", "celebA", "The name of dataset [celebA, mnist, lsun]")
+flags.DEFINE_integer("image_width", 28, "The width of the images presented to the model")
+flags.DEFINE_string("dataset", "mnist", "The name of dataset [celebA, mnist, lsun]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("is_train", True, "True for training, False for testing [False]")
@@ -37,8 +37,8 @@ def main(_):
 
     with tf.Session(config=tf.ConfigProto(
             allow_soft_placement=True, log_device_placement=False)) as sess:
-        if FLAGS.dataset == 'mnist':
-            assert False
+        # if FLAGS.dataset == 'mnist':
+        #    assert False
         dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size,
                       sample_size=128,
                       z_dim=8192,
@@ -46,7 +46,7 @@ def main(_):
                       generator_target_prob=.75 / 2.,
                       out_stddev=.075,
                       out_init_b=- .45,
-                      image_shape=[FLAGS.image_width, FLAGS.image_width, 3],
+                      image_shape=[FLAGS.image_width, FLAGS.image_width, 1],
                       dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir,
                       sample_dir=FLAGS.sample_dir,
                       generator=Generator(),

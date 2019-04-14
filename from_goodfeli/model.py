@@ -11,8 +11,8 @@ filename = "/media/NAS_SHARED/imagenet/imagenet_train_128.tfrecords"
 
 class DCGAN(object):
     def __init__(self, sess, image_size=108, is_crop=True,
-                 batch_size=64, image_shape=[64, 64, 3],
-                 y_dim=None, z_dim=100, gf_dim=64, df_dim=64,
+                 batch_size=64, image_shape=[28, 28, 1],
+                 y_dim=None, z_dim=100, gf_dim=32, df_dim=64,
                  gfc_dim=1024, dfc_dim=1024, c_dim=3, dataset_name='default',
                  d_label_smooth=.25,
                  generator_target_prob=1.,
@@ -331,8 +331,8 @@ def read_and_decode(filename_queue):
         })
 
     image = tf.decode_raw(features['image_raw'], tf.uint8)
-    image.set_shape(64 * 64 * 3)
-    image = tf.reshape(image, [64, 64, 3])
+    image.set_shape(28 * 28 * 1)
+    image = tf.reshape(image, [28, 28, 1])
 
     image = tf.cast(image, tf.float32) * (2. / 255) - 1.
 
@@ -350,8 +350,8 @@ def read_and_decode_with_labels(filename_queue):
         })
 
     image = tf.decode_raw(features['image_raw'], tf.uint8)
-    image.set_shape(64 * 64 * 3)
-    image = tf.reshape(image, [64, 64, 3])
+    image.set_shape(28 * 28 * 1)
+    image = tf.reshape(image, [28, 28, 1])
 
     image = tf.cast(image, tf.float32) * (2. / 255) - 1.
 

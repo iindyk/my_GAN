@@ -19,7 +19,7 @@ get_stddev = lambda x, k_h, k_w: 1 / math.sqrt(k_w * k_h * x.get_shape()[-1])
 index = 0
 
 
-def get_image(image_path, image_size, is_crop=True, resize_w=64):
+def get_image(image_path, image_size, is_crop=True, resize_w=28):
     global index
     out = transform(imread(image_path), image_size, is_crop, resize_w)
     return out
@@ -42,7 +42,7 @@ def merge_images(images, size):
 
 def merge(images, size):
     h, w = images.shape[1], images.shape[2]
-    img = np.zeros((h * size[0], w * size[1], 3))
+    img = np.zeros((h * size[0], w * size[1], 1))
 
     for idx, image in enumerate(images):
         i = idx % size[1]
@@ -55,15 +55,15 @@ def merge(images, size):
         except ValueError:
             # print(img.shape, i, j)
             pass
-    return img
+    return np.reshape(img, (h * size[0], w * size[1]))
 
 
 def imsave(images, size, path):
     print('sample saved')
-    return scipy.misc.imsave(path, merge(images, size))
+    return scipy.misc.imsave(path, (255.-merge(images, size)))
 
 
-def center_crop(x, crop_h, crop_w=None, resize_w=64):
+def center_crop(x, crop_h, crop_w=None, resize_w=28):
     h, w = x.shape[:2]
     crop_h = min(h, w)  # we changed this to override the original DCGAN-TensorFlow behavior
     # Just use as much of the image as possible while keeping it square
@@ -76,7 +76,7 @@ def center_crop(x, crop_h, crop_w=None, resize_w=64):
                                [resize_w, resize_w])
 
 
-def transform(image, npx=64, is_crop=True, resize_w=64):
+def transform(image, npx=28, is_crop=True, resize_w=28):
     # npx : # of pixels width/height of image
     cropped_image = center_crop(image, npx, resize_w=resize_w)
     return np.array(cropped_image) / 127.5 - 1.

@@ -5,8 +5,8 @@ from from_goodfeli.ops import avg_grads
 from from_goodfeli.model import read_and_decode_with_labels
 from from_goodfeli.model import get_vars
 
-IMSIZE = 64
-filename = '/home/iindyk/PycharmProjects/my_GAN/ImageNet/imagenet_train_labeled_' + str(IMSIZE) + '.tfrecords'
+IMSIZE = 28
+filename = '/home/iindyk/PycharmProjects/my_GAN/MNIST/MNIST_train_labeled_' + str(IMSIZE) + '.tfrecords'
 
 
 def build_model(self):
@@ -108,13 +108,11 @@ def build_model_single_gpu(self, gpu_idx):
         with tf.control_dependencies([update]):
             d_loss_class = tf.Print(d_loss_class,
                                     [avg_error_rate], "running top-1 error rate")
-    # Do not smooth the negative targets.
-    # If we use positive targets of alpha and negative targets of beta,
-    # then the optimal discriminator function is D(x) = (alpha p_data(x) + beta p_generator(x)) / (p_data(x) + p_generator(x)).
-    # This means if we want to get less extreme values, we shrink alpha.
-    # Increasing beta makes the generator self-reinforcing.
-    # Note that using this one-sided label smoothing also shifts the equilibrium
-    # value to alpha/2.
+    # Do not smooth the negative targets. If we use positive targets of alpha and negative targets of beta,
+    # then the optimal discriminator function is D(x) = (alpha p_data(x) + beta p_generator(x)) / (p_data(x) +
+    # p_generator(x)). This means if we want to get less extreme values, we shrink alpha. Increasing beta makes the
+    # generator self-reinforcing. Note that using this one-sided label smoothing also shifts the equilibrium value to
+    # alpha/2.
     d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(logits=D_on_G_logits,
                                                           labels=tf.zeros_like(D_on_G_logits))
     g_loss = sigmoid_kl_with_logits(D_on_G_logits, self.generator_target_prob)
