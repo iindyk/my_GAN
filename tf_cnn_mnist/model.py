@@ -502,6 +502,54 @@ class DCGAN(object):
 
                 return tf.nn.sigmoid(deconv2d(h2, [self.batch_size, s_h, s_w, self.c_dim], name='g_h3'))
 
+    def classifier(self, images):
+        with tf.variable_scope("classifier") as scope:
+            scope.reuse_variables()
+            n_hidden_1 = 256  # 1st layer number of neurons
+            n_hidden_2 = 256  # 2nd layer number of neurons
+            n_input = 784  # MNIST data input (img shape: 28*28)
+            n_classes = 3  # MNIST total classes (0-9 digits)
+
+            # Store layers weight & bias
+            weights = {
+                'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1]), name='c_h1'),
+                'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2]), name='c_h2'),
+                'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]), name='c_hout')
+            }
+            biases = {
+                'b1': tf.Variable(tf.random_normal([n_hidden_1]), name='c_b1'),
+                'b2': tf.Variable(tf.random_normal([n_hidden_2]), name='c_b2'),
+                'out': tf.Variable(tf.random_normal([n_classes]), name='c_bout')
+            }
+
+            # Create model
+            # Hidden fully connected layer with 256 neurons
+            layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+            # Hidden fully connected layer with 256 neurons
+            layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+            # Output fully connected layer with a neuron for each class
+            out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+            return out_layer
+
+    def get_classifier_loss(self, images):
+        # todo
+        pass
+
+    def get_classifier_loss_grad(self, images, y):
+        # fit classifier
+        maxit = 300
+        logits = self.classifier(images)
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
+        optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
+        t_vars = tf.trainable_variables()
+        c_vars = [var for var in t_vars if 'c_' in var.name]
+        train_op = optimizer.minimize(loss, var_list=c_vars)
+        for i in range(maxit):
+            _ = self.sess.run([train_op])
+
+        # calculate adversary's objective grad
+        return None
+
     def load_mnist(self, labels=None):
         if labels:
             assert len(labels) == self.y_dim
