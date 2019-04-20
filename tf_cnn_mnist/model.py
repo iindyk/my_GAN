@@ -533,7 +533,7 @@ class DCGAN(object):
 
     def get_classifier_loss(self, images):
         # todo
-        pass
+        return 0.
 
     def get_classifier_loss_grad(self, images, y):
         # fit classifier
@@ -543,11 +543,32 @@ class DCGAN(object):
         optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
         t_vars = tf.trainable_variables()
         c_vars = [var for var in t_vars if 'c_' in var.name]
+        n_c_vars = len(c_vars)
         train_op = optimizer.minimize(loss, var_list=c_vars)
         for i in range(maxit):
             _ = self.sess.run([train_op])
 
-        # calculate adversary's objective grad
+        c_vars_flatten = []
+        for c_var in c_vars:
+            for _c_var in tf.layers.flatten(c_var):
+                c_vars_flatten.append(_c_var)
+
+        # calculate classification parameters grad
+        dl_dc = tf.gradients(loss, c_vars_flatten)
+        dl_dc_dc = []
+        im_flatten = tf.layers.flatten(images)
+        dl_dc_dxi = []
+        for dl_dc_i in dl_dc:
+            dl_dc_dc.append(tf.gradients(dl_dc_i, c_vars_flatten))
+            dl_dc_dxi.append(tf.gradients(dl_dc_i, im_flatten))
+
+        dl_dc_dc = tf.convert_to_tensor(dl_dc_dc)
+        dl_dc_dxi = tf.convert_to_tensor(dl_dc_dxi)
+        dc_dxi = -tf.matmul(tf.linalg.inv(dl_dc_dc), dl_dc_dxi)
+
+        # calculate objective grad
+
+
         return None
 
     def load_mnist(self, labels=None):
