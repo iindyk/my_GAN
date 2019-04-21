@@ -108,3 +108,22 @@ def linear(input_, output_size, scope=None, stddev=0.02, bias_start=0.0, with_w=
             return tf.matmul(input_, matrix) + bias, matrix, bias
         else:
             return tf.matmul(input_, matrix) + bias
+
+
+def jacobian(y, x, tf_loop=False):
+    # If the shape of Y is fully defined you can choose between a
+    # Python-level or TF-level loop to make the Jacobian matrix
+    # If the shape of Y is not fully defined you must use TF loop
+    # In both cases it is just a matter of stacking gradients for each Y
+    if tf_loop or y.shape.num_elements() is None:
+        i = tf.constant(0, dtype=tf.int32)
+        y_size = tf.size(y)
+        rows = tf.TensorArray(dtype=y.dtype, size=y_size, element_shape=x.shape)
+        _, rows = tf.while_loop(
+            lambda i, rows: i < y_size,
+            lambda i, rows: [i + 1, rows.write(i, tf.gradients(y[i], x)[0])],
+            [i, rows])
+        return rows.stack()
+    else:
+        return tf.stack([tf.gradients(y[i], x)[0]
+                         for i in range(y.shape.num_elements())], axis=0)
