@@ -7,8 +7,8 @@ import tensorflow as tf
 import numpy as np
 from six.moves import xrange
 
-from from_jguertl.ops import *
-from from_jguertl.utils import *
+from tf_cnn_mnist.ops import *
+from tf_cnn_mnist.utils import *
 
 
 def conv_out_size_same(size, stride):
@@ -16,7 +16,7 @@ def conv_out_size_same(size, stride):
 
 
 class DCGAN(object):
-    def __init__(self, sess, test_data, test_labels, input_height=108, input_width=108, crop=True,
+    def __init__(self, sess, alpha, input_height=108, input_width=108, crop=True,
                  batch_size=64, sample_num=64, output_height=64, output_width=64,
                  y_dim=None, z_dim=100, gf_dim=64, df_dim=64,
                  gfc_dim=1024, dfc_dim=1024, c_dim=3, dataset_name='default',
@@ -37,8 +37,7 @@ class DCGAN(object):
         self.sess = sess
         self.crop = crop
         self.labels = labels
-        self.test_data = test_data
-        self.test_labels = test_labels
+        self.alpha = alpha
 
         self.batch_size = batch_size
         self.sample_num = sample_num
@@ -76,7 +75,7 @@ class DCGAN(object):
         self.checkpoint_dir = checkpoint_dir
 
         if self.dataset_name == 'mnist':
-            self.data_X, self.data_y = self.load_mnist()
+            self.data_X, self.data_y, self.test_data, self.test_labels = self.load_mnist()
             self.c_dim = self.data_X[0].shape[-1]
         else:
             self.data = glob(os.path.join("./data", self.dataset_name, self.input_fname_pattern))
@@ -129,6 +128,8 @@ class DCGAN(object):
         self.z_sum = histogram_summary("z", self.z)
 
         self.G = self.generator(self.z, self.y)
+        self.C_train = self.classifier(self.G)
+        self.C_test = self.classifier(self.test_data)
         self.D, self.D_logits = self.discriminator(inputs, self.y, reuse=False)
         self.sampler = self.sampler(self.z, self.y)
         self.D_, self.D_logits_ = self.discriminator(self.G, self.y, reuse=True)
@@ -143,6 +144,8 @@ class DCGAN(object):
             except:
                 return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, targets=y)
 
+        self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, self.y))
+        self.c_loss_test = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_test, self.test_labels))
         self.d_loss_real = tf.reduce_mean(
             sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
         self.d_loss_fake = tf.reduce_mean(
@@ -162,6 +165,25 @@ class DCGAN(object):
 
         self.d_vars = [var for var in t_vars if 'd_' in var.name]
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
+        self.c_vars = [var for var in t_vars if 'c_' in var.name]
+        self.c_vars_flatten = []
+        for c_var in self.c_vars:
+            c_var_flat = tf.layers.flatten(c_var)
+            for _c_var in c_var_flat:
+                self.c_vars_flatten.append(_c_var)
+        self.dl_dc = tf.gradients(self.c_loss_train, self.c_vars_flatten)
+        self.dlt_dc = tf.gradients(self.c_loss_test, self.c_vars_flatten)
+        self.dl_dc_dc = []
+        self.dl_dc_dxi = []
+        g_flatten = tf.layers.flatten(self.G)
+        for dl_dc_i in self.dl_dc:
+            self.dl_dc_dc.append(tf.gradients(dl_dc_i, self.c_vars_flatten))
+            self.dl_dc_dxi.append(tf.gradients(dl_dc_i, g_flatten))
+
+        # define custom part of adversary's loss as tensor
+        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], [tf.float32], name='cust_loss',
+                                     grad=self.get_adv_loss_grad)
+        self.g_loss += self.alpha*self.cust_adv_loss
 
         self.saver = tf.train.Saver()
 
@@ -170,6 +192,7 @@ class DCGAN(object):
             .minimize(self.d_loss, var_list=self.d_vars)
         g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
+        self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_vars)
         try:
             tf.global_variables_initializer().run()
         except:
@@ -540,38 +563,40 @@ class DCGAN(object):
     def get_adv_loss_grad(self, images, y):
         # fit classifier
         maxit = 300
-        logits = self.classifier(images)
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
-        optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
-        t_vars = tf.trainable_variables()
-        c_vars = [var for var in t_vars if 'c_' in var.name]
-        train_op = optimizer.minimize(loss, var_list=c_vars)
+        #logits = self.classifier(images)
+        #loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
+        #optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
+        #t_vars = tf.trainable_variables()
+        #c_vars = [var for var in t_vars if 'c_' in var.name]
+        #train_op = optimizer.minimize(loss, var_list=c_vars)
         for i in range(maxit):
-            _ = self.sess.run([train_op])
+            _ = self.sess.run([self.c_optim])
 
-        c_vars_flatten = []
-        for c_var in c_vars:
-            for _c_var in tf.layers.flatten(c_var):
-                c_vars_flatten.append(_c_var)
+        #c_vars_flatten = []
+        #for c_var in c_vars:
+        #    for _c_var in tf.layers.flatten(c_var):
+        #        c_vars_flatten.append(_c_var)
 
         # calculate classification parameters grad
-        dl_dc = tf.gradients(loss, c_vars_flatten)
-        dl_dc_dc = []
-        im_flatten = tf.layers.flatten(images)
-        dl_dc_dxi = []
-        for dl_dc_i in dl_dc:
-            dl_dc_dc.append(tf.gradients(dl_dc_i, c_vars_flatten))
-            dl_dc_dxi.append(tf.gradients(dl_dc_i, im_flatten))
+        #dl_dc = tf.gradients(loss, c_vars_flatten)
+        #dl_dc_dc = []
+        #im_flatten = tf.layers.flatten(images)
+        #dl_dc_dxi = []
+        #for dl_dc_i in dl_dc:
+        #    dl_dc_dc.append(tf.gradients(dl_dc_i, c_vars_flatten))
+        #    dl_dc_dxi.append(tf.gradients(dl_dc_i, im_flatten))
 
-        dl_dc_dc = tf.convert_to_tensor(dl_dc_dc)
-        dl_dc_dxi = tf.convert_to_tensor(dl_dc_dxi)
+        dl_dc_dc = tf.convert_to_tensor(self.dl_dc_dc)
+        dl_dc_dxi = tf.convert_to_tensor(self.dl_dc_dxi)
         dc_dxi = -tf.matmul(tf.linalg.inv(dl_dc_dc), dl_dc_dxi)
-        logits_test = self.classifier(self.test_data)
-        loss_test = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits_test, labels=self.test_labels))
-        loss_test_grad = tf.gradients(loss_test, c_vars_flatten)
-        dlt_dc = tf.convert_to_tensor(loss_test_grad)
+        #logits_test = self.classifier(self.test_data)
+        #loss_test = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits_test, labels=self.test_labels))
+        #loss_test_grad = tf.gradients(loss_test, c_vars_flatten)
+        dlt_dc = tf.convert_to_tensor(self.dlt_dc)
         dlt_dxi_flat = tf.matmul(dlt_dc, dc_dxi)
-        return -tf.reshape(dlt_dxi_flat, images.shape)
+        ret = -tf.reshape(dlt_dxi_flat, images.shape)
+        print('adv loss grad norm=', tf.norm(ret))
+        return ret
 
     def load_mnist(self, labels=None):
         if labels:
@@ -597,27 +622,36 @@ class DCGAN(object):
         trY = np.asarray(trY)
         teY = np.asarray(teY)
 
-        X = np.concatenate((trX, teX), axis=0)
-        y = np.concatenate((trY, teY), axis=0).astype(np.int)
+        #X = np.concatenate((trX, teX), axis=0)
+        #y = np.concatenate((trY, teY), axis=0).astype(np.int)
 
         seed = 547
         np.random.seed(seed)
-        np.random.shuffle(X)
+        np.random.shuffle(trX)
         np.random.seed(seed)
-        np.random.shuffle(y)
+        np.random.shuffle(trY)
 
         final_x = []
         final_y = []
-        y_vec = np.zeros((len(y), self.y_dim), dtype=np.float)
-        for i, label in enumerate(y):
+        for i, label in enumerate(trY):
             for j in range(self.y_dim):
                 if label == self.labels[j]:
                     one_hot = np.zeros(self.y_dim)
                     one_hot[j] = 1
-                    final_x.append(X[i])
+                    final_x.append(trX[i])
                     final_y.append(one_hot)
 
-        return np.array(final_x) / 127.5 - 1., np.array(y_vec)
+        final_x_te = []
+        final_y_te = []
+        for i, label in enumerate(teY):
+            for j in range(self.y_dim):
+                if label == self.labels[j]:
+                    one_hot = np.zeros(self.y_dim)
+                    one_hot[j] = 1
+                    final_x_te.append(teX[i])
+                    final_y_te.append(one_hot)
+
+        return np.array(final_x) / 127.5 - 1., np.array(final_y), np.array(final_x[:1000])/127.5-1., np.array(final_y_te)
 
     @property
     def model_dir(self):
