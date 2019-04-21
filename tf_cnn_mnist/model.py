@@ -16,7 +16,7 @@ def conv_out_size_same(size, stride):
 
 
 class DCGAN(object):
-    def __init__(self, sess, input_height=108, input_width=108, crop=True,
+    def __init__(self, sess, test_data, test_labels, input_height=108, input_width=108, crop=True,
                  batch_size=64, sample_num=64, output_height=64, output_width=64,
                  y_dim=None, z_dim=100, gf_dim=64, df_dim=64,
                  gfc_dim=1024, dfc_dim=1024, c_dim=3, dataset_name='default',
@@ -37,6 +37,8 @@ class DCGAN(object):
         self.sess = sess
         self.crop = crop
         self.labels = labels
+        self.test_data = test_data
+        self.test_labels = test_labels
 
         self.batch_size = batch_size
         self.sample_num = sample_num
@@ -524,7 +526,7 @@ class DCGAN(object):
 
             # Create model
             # Hidden fully connected layer with 256 neurons
-            layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+            layer_1 = tf.add(tf.matmul(images, weights['h1']), biases['b1'])
             # Hidden fully connected layer with 256 neurons
             layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
             # Output fully connected layer with a neuron for each class
@@ -535,7 +537,7 @@ class DCGAN(object):
         # todo
         return 0.
 
-    def get_classifier_loss_grad(self, images, y):
+    def get_adv_loss_grad(self, images, y):
         # fit classifier
         maxit = 300
         logits = self.classifier(images)
@@ -543,7 +545,6 @@ class DCGAN(object):
         optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
         t_vars = tf.trainable_variables()
         c_vars = [var for var in t_vars if 'c_' in var.name]
-        n_c_vars = len(c_vars)
         train_op = optimizer.minimize(loss, var_list=c_vars)
         for i in range(maxit):
             _ = self.sess.run([train_op])
@@ -565,11 +566,12 @@ class DCGAN(object):
         dl_dc_dc = tf.convert_to_tensor(dl_dc_dc)
         dl_dc_dxi = tf.convert_to_tensor(dl_dc_dxi)
         dc_dxi = -tf.matmul(tf.linalg.inv(dl_dc_dc), dl_dc_dxi)
-
-        # calculate objective grad
-
-
-        return None
+        logits_test = self.classifier(self.test_data)
+        loss_test = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits_test, labels=self.test_labels))
+        loss_test_grad = tf.gradients(loss_test, c_vars_flatten)
+        dlt_dc = tf.convert_to_tensor(loss_test_grad)
+        dlt_dxi_flat = tf.matmul(dlt_dc, dc_dxi)
+        return -tf.reshape(dlt_dxi_flat, images.shape)
 
     def load_mnist(self, labels=None):
         if labels:
