@@ -171,7 +171,9 @@ class DCGAN(object):
         self.dlt_dc = tf.gradients(self.c_loss_test, self.c_vars)
         self.dl_dc_dc = []
         self.dl_dc_dxi = []
+        # todo: use tf.hessian instead
         for dl_dc_i in self.dl_dc:
+            print(dl_dc_i)
             dl_dc_i_flat = tf.reshape(dl_dc_i, [-1])
             self.dl_dc_dc.append(jacobian(dl_dc_i_flat, self.c_vars))
             self.dl_dc_dxi.append(jacobian(dl_dc_i_flat, self.G))
@@ -526,8 +528,8 @@ class DCGAN(object):
     def classifier(self, images):
         with tf.variable_scope("classifier", reuse=tf.AUTO_REUSE) as scope:
             #scope.reuse_variables()
-            n_hidden_1 = 256  # 1st layer number of neurons
-            n_hidden_2 = 256  # 2nd layer number of neurons
+            n_hidden_1 = 8  # 1st layer number of neurons
+            n_hidden_2 = 8  # 2nd layer number of neurons
             n_input = 784  # MNIST data input (img shape: 28*28)
             n_classes = 3  # MNIST total classes (0-9 digits)
 
@@ -553,7 +555,7 @@ class DCGAN(object):
             out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
             return out_layer
 
-    def get_classifier_loss(self, images):
+    def get_classifier_loss(self, images, y):
         # todo
         return 0.
 
