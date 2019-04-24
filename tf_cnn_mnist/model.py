@@ -172,7 +172,8 @@ class DCGAN(object):
 
 
         # define custom part of adversary's loss as tensor
-        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], [tf.float32], name='cust_loss',
+        self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
+        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='cust_loss',
                                      grad=self.get_adv_loss_grad)
         self.g_loss += self.alpha*self.cust_adv_loss
 
@@ -183,7 +184,6 @@ class DCGAN(object):
             .minimize(self.d_loss, var_list=self.d_vars)
         g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
-        self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_vars)
         try:
             tf.global_variables_initializer().run()
         except:
@@ -591,14 +591,11 @@ class DCGAN(object):
         #    dl_dc_dc.append(tf.gradients(dl_dc_i, c_vars_flatten))
         #    dl_dc_dxi.append(tf.gradients(dl_dc_i, im_flatten))
 
-        dl_dc_dc = tf.convert_to_tensor(self.dl_dc_dc)
-        dl_dc_dxi = tf.convert_to_tensor(self.dl_dc_dxi)
-        dc_dxi = -tf.matmul(tf.linalg.inv(dl_dc_dc), dl_dc_dxi)
+        dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
         #logits_test = self.classifier(self.test_data)
         #loss_test = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits_test, labels=self.test_labels))
         #loss_test_grad = tf.gradients(loss_test, c_vars_flatten)
-        dlt_dc = tf.convert_to_tensor(self.dlt_dc)
-        dlt_dxi_flat = tf.matmul(dlt_dc, dc_dxi)
+        dlt_dxi_flat = tf.matmul(self.dlt_dc, dc_dxi)
         ret = -tf.reshape(dlt_dxi_flat, images.shape)
         print('adv loss grad norm=', tf.norm(ret))
         return ret
