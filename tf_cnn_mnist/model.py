@@ -162,21 +162,14 @@ class DCGAN(object):
 
         self.d_vars = [var for var in t_vars if 'd_' in var.name]
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
-        self.c_vars = [var for var in t_vars if 'c_' in var.name]
-        c_vars_flat_list = []
-        for c_var in self.c_vars:
-            c_vars_flat_list.append(tf.reshape(c_var, [-1]))
-        self.c_vars_flatten = tf.concat(c_vars_flat_list, axis=0)
-        self.dl_dc = tf.gradients(self.c_loss_train, self.c_vars)
-        self.dlt_dc = tf.gradients(self.c_loss_test, self.c_vars)
-        self.dl_dc_dc = []
-        self.dl_dc_dxi = []
-        # todo: use tf.hessian instead
-        for dl_dc_i in self.dl_dc:
-            print(dl_dc_i)
-            dl_dc_i_flat = tf.reshape(dl_dc_i, [-1])
-            self.dl_dc_dc.append(jacobian(dl_dc_i_flat, self.c_vars))
-            self.dl_dc_dxi.append(jacobian(dl_dc_i_flat, self.G))
+
+
+        self.dl_dc_dxi_mixed = tf.hessians(self.c_loss_train, self.c_sv)[0]
+
+        self.dlt_dc = tf.gradients(self.c_loss_test, self.c_sv)[0][:self._n]
+        self.dl_dc_dc = self.dl_dc_dxi_mixed[:self._n, :self._n]
+        self.dl_dc_dxi = self.dl_dc_dxi_mixed[self._n:, :self._n]
+
 
         # define custom part of adversary's loss as tensor
         self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], [tf.float32], name='cust_loss',
@@ -528,27 +521,40 @@ class DCGAN(object):
     def classifier(self, images):
         with tf.variable_scope("classifier", reuse=tf.AUTO_REUSE) as scope:
             #scope.reuse_variables()
-            n_hidden_1 = 8  # 1st layer number of neurons
-            n_hidden_2 = 8  # 2nd layer number of neurons
+            n_hidden_1 = 256  # 1st layer number of neurons
+            n_hidden_2 = 256  # 2nd layer number of neurons
             n_input = 784  # MNIST data input (img shape: 28*28)
             n_classes = 3  # MNIST total classes (0-9 digits)
+            # create a supervector containing all variables
+            self._n = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2+(n_hidden_2+1)*n_classes+\
+                      self.batch_size*self.input_height**2
+            _n1 = (n_input+1)*n_hidden_1
+            _n2 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2
+            _n3 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2+(n_hidden_2+1)*n_classes
+            self.c_sv = tf.get_variable('c_sv', [self._n], initializer=tf.truncated_normal_initializer(.02))
 
             # Store layers weight & bias
             weights = {
-                'h1': tf.get_variable('c_h1', [n_input, n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
-                'h2': tf.get_variable('c_h2', [n_hidden_1, n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
-                'out': tf.get_variable('c_hout', [n_hidden_2, n_classes], initializer=tf.truncated_normal_initializer(.02))
+                #'h1': tf.get_variable('c_h1', [n_input, n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
+                'h1': tf.reshape(self.c_sv[:_n1-n_hidden_1], shape=[n_input, n_hidden_1]),
+                #'h2': tf.get_variable('c_h2', [n_hidden_1, n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
+                'h2': tf.reshape(self.c_sv[_n1:_n2-n_hidden_2], shape=[n_hidden_1, n_hidden_2]),
+                #'out': tf.get_variable('c_hout', [n_hidden_2, n_classes], initializer=tf.truncated_normal_initializer(.02))
+                'out': tf.reshape(self.c_sv[_n2:_n3-n_classes], shape=[n_hidden_2, n_classes])
             }
             biases = {
-                'b1': tf.get_variable('c_b1', [n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
-                'b2': tf.get_variable('c_b2', [n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
-                'out': tf.get_variable('c_bout', [n_classes], initializer=tf.truncated_normal_initializer(.02))
+                #'b1': tf.get_variable('c_b1', [n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
+                'b1': self.c_sv[_n1-n_hidden_1:_n1],
+                #'b2': tf.get_variable('c_b2', [n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
+                'b2': self.c_sv[_n2-n_hidden_2:_n2],
+                #'out': tf.get_variable('c_bout', [n_classes], initializer=tf.truncated_normal_initializer(.02))
+                'out': self.c_sv[_n3-n_classes:_n3]
             }
 
             # Create model
             # Hidden fully connected layer with 256 neurons
-            layer0 = tf.reshape(tf.cast(images, tf.float32), shape=(-1, self.input_height**2))
-            layer_1 = tf.add(tf.matmul(layer0, weights['h1']), biases['b1'])
+            tf.assign(self.c_sv[_n3:], tf.reshape(images, [-1]))
+            layer_1 = tf.add(tf.matmul(tf.reshape(self.c_sv[_n3:], (-1, n_input)), weights['h1']), biases['b1'])
             # Hidden fully connected layer with 256 neurons
             layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
             # Output fully connected layer with a neuron for each class
@@ -650,8 +656,8 @@ class DCGAN(object):
                     final_x_te.append(teX[i])
                     final_y_te.append(one_hot)
 
-        return np.array(final_x) / 127.5 - 1., np.array(final_y), np.array(final_x[:1000]).astype(np.float32)/127.5-1., \
-               np.array(final_y_te[:1000]).astype(np.float32)
+        return np.array(final_x) / 127.5 - 1., np.array(final_y), np.array(final_x[:self.batch_size]).astype(np.float32)/127.5-1., \
+               np.array(final_y_te[:self.batch_size]).astype(np.float32)
 
     @property
     def model_dir(self):
