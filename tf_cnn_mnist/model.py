@@ -166,28 +166,44 @@ class DCGAN(object):
 
         self.dl_dc_dxi_mixed = tf.hessians(self.c_loss_train, self.c_sv)[0]
 
-        self.dlt_dc = tf.gradients(self.c_loss_test, self.c_sv)[0][:self._n]
-        self.dl_dc_dc = self.dl_dc_dxi_mixed[:self._n, :self._n]
-        self.dl_dc_dxi = self.dl_dc_dxi_mixed[self._n:, :self._n]
+        self.dlt_dc = tf.gradients(self.c_loss_test, self.c_sv)[0][:self._n3]
+        self.dl_dc_dc = self.dl_dc_dxi_mixed[:self._n3, :self._n3]
+        self.dl_dc_dxi = self.dl_dc_dxi_mixed[:self._n3, self._n3:]
 
 
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
-        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='PyFunc',
-                                     grad=self.get_adv_loss_grad)
-        self.g_loss += self.alpha*self.cust_adv_loss
+        #self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='PyFunc',
+        #                             grad=self.get_adv_loss_grad)
+        #self.g_loss += self.alpha*self.cust_adv_loss
+        #self.cust_adv_grad = tf.py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
+        #                                Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
+        #                                name='Pyfuncgrad')
+        self.cust_adv_grad = py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
+                                        Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
+                                        name='Pyfuncgrad', grad=self.dummy)
 
         self.saver = tf.train.Saver()
 
     def train(self, config):
-        print(0)
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        print(1)
         # todo: manual gradient descent step
-        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-            .minimize(self.g_loss, var_list=self.g_vars)
-        print(2)
+        #g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        #    .minimize(self.g_loss, var_list=self.g_vars)
+        new_g_vars = []
+        g_accumulation = []
+        new_g_accumulation = []
+        n_g_vars = len(self.g_vars)
+        g_grad = tf.gradients(ys=self.g_loss, xs=self.g_vars)
+        g_adv_grad = tf.gradients(ys=tf.tensordot(self.cust_adv_grad, self.G, axes=[[0, 1, 2], [0, 1, 2]]), xs=self.g_vars)
+        for i in range(n_g_vars):
+            g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad[i].get_shape(), trainable=False))
+            new_g_accumulation.append(
+                g_accumulation[i].assign(config.beta1 * g_accumulation[i] + (1. - config.beta1) * (g_grad[i])+
+                                         self.alpha*g_adv_grad[i]))
+            new_g_vars.append(self.g_vars[i].assign(self.g_vars[i] - config.learning_rate * g_accumulation[i]))
+
         try:
             tf.global_variables_initializer().run()
         except:
@@ -235,25 +251,9 @@ class DCGAN(object):
                     "./data", config.dataset, self.input_fname_pattern))
                 batch_idxs = min(len(self.data), config.train_size) // config.batch_size
 
-            for idx in xrange(0, batch_idxs):
-                if config.dataset == 'mnist':
-                    batch_images = self.data_X[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch_labels = self.data_y[idx * config.batch_size:(idx + 1) * config.batch_size]
-                else:
-                    batch_files = self.data[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch = [
-                        get_image(batch_file,
-                                  input_height=self.input_height,
-                                  input_width=self.input_width,
-                                  resize_height=self.output_height,
-                                  resize_width=self.output_width,
-                                  crop=self.crop,
-                                  grayscale=self.grayscale) for batch_file in batch_files]
-                    if self.grayscale:
-                        batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
-                    else:
-                        batch_images = np.array(batch).astype(np.float32)
-                    batch_labels = self.celeba_labels[idx * config.batch_size: (idx + 1) * config.batch_size]
+            for idx in range(0, batch_idxs):
+                batch_images = self.data_X[idx * config.batch_size:(idx + 1) * config.batch_size]
+                batch_labels = self.data_y[idx * config.batch_size:(idx + 1) * config.batch_size]
 
                 batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                     .astype(np.float32)
@@ -269,17 +269,27 @@ class DCGAN(object):
                                                    })
                     self.writer.add_summary(summary_str, counter)
 
+                    # Update C
+                    for i in range(300):
+                        _ = self.sess.run([self.c_optim], feed_dict={
+                            self.z: batch_z,
+                            self.y: batch_labels,
+                        })
+
                     # Update G network
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={
-                                                       self.z: batch_z,
-                                                       self.y: batch_labels,
-                                                   })
+                    _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
+                                                      feed_dict={
+                                                          self.z: batch_z,
+                                                          self.y: batch_labels,
+                                                      })
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={self.z: batch_z, self.y: batch_labels})
+                    _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
+                                                      feed_dict={
+                                                          self.z: batch_z,
+                                                          self.y: batch_labels,
+                                                      })
                     self.writer.add_summary(summary_str, counter)
 
                     errD_fake = self.d_loss_fake.eval({
@@ -294,25 +304,6 @@ class DCGAN(object):
                         self.z: batch_z,
                         self.y: batch_labels
                     })
-                else:
-                    # Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                                                   feed_dict={self.inputs: batch_images, self.z: batch_z})
-                    self.writer.add_summary(summary_str, counter)
-
-                    # Update G network
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={self.z: batch_z})
-                    self.writer.add_summary(summary_str, counter)
-
-                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={self.z: batch_z})
-                    self.writer.add_summary(summary_str, counter)
-
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_z})
-                    errD_real = self.d_loss_real.eval({self.inputs: batch_images})
-                    errG = self.g_loss.eval({self.z: batch_z})
 
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
@@ -532,7 +523,7 @@ class DCGAN(object):
                       self.batch_size*self.input_height**2
             _n1 = (n_input+1)*n_hidden_1
             _n2 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2
-            _n3 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2+(n_hidden_2+1)*n_classes
+            self._n3 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2+(n_hidden_2+1)*n_classes
             self.c_sv = tf.get_variable('c_sv', [self._n], initializer=tf.truncated_normal_initializer(.02))
 
             # Store layers weight & bias
@@ -542,7 +533,7 @@ class DCGAN(object):
                 #'h2': tf.get_variable('c_h2', [n_hidden_1, n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
                 'h2': tf.reshape(self.c_sv[_n1:_n2-n_hidden_2], shape=[n_hidden_1, n_hidden_2]),
                 #'out': tf.get_variable('c_hout', [n_hidden_2, n_classes], initializer=tf.truncated_normal_initializer(.02))
-                'out': tf.reshape(self.c_sv[_n2:_n3-n_classes], shape=[n_hidden_2, n_classes])
+                'out': tf.reshape(self.c_sv[_n2:self._n3-n_classes], shape=[n_hidden_2, n_classes])
             }
             biases = {
                 #'b1': tf.get_variable('c_b1', [n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
@@ -550,56 +541,30 @@ class DCGAN(object):
                 #'b2': tf.get_variable('c_b2', [n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
                 'b2': self.c_sv[_n2-n_hidden_2:_n2],
                 #'out': tf.get_variable('c_bout', [n_classes], initializer=tf.truncated_normal_initializer(.02))
-                'out': self.c_sv[_n3-n_classes:_n3]
+                'out': self.c_sv[self._n3-n_classes:self._n3]
             }
 
             # Create model
             # Hidden fully connected layer with 256 neurons
-            tf.assign(self.c_sv[_n3:], tf.reshape(images, [-1]))
-            layer_1 = tf.add(tf.matmul(tf.reshape(self.c_sv[_n3:], (-1, n_input)), weights['h1']), biases['b1'])
+            tf.assign(self.c_sv[self._n3:], tf.reshape(images, [-1]))
+            layer_1 = tf.add(tf.matmul(tf.reshape(self.c_sv[self._n3:], (-1, n_input)), weights['h1']), biases['b1'])
             # Hidden fully connected layer with 256 neurons
             layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
             # Output fully connected layer with a neuron for each class
             out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
             return out_layer
 
-    def get_classifier_loss(self, images, y):
+    def get_classifier_loss(self, z, y):
         # todo
         return 0.
+    def dummy(self, z, y):
+        return [tf.zeros_like(z), tf.zeros_like(y)]
 
-    def get_adv_loss_grad(self, images, y):
-        # fit classifier
-        maxit = 300
-        #logits = self.classifier(images)
-        #loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y))
-        #optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
-        #t_vars = tf.trainable_variables()
-        #c_vars = [var for var in t_vars if 'c_' in var.name]
-        #train_op = optimizer.minimize(loss, var_list=c_vars)
-        for i in range(maxit):
-            _ = self.sess.run([self.c_optim])
-
-        #c_vars_flatten = []
-        #for c_var in c_vars:
-        #    for _c_var in tf.layers.flatten(c_var):
-        #        c_vars_flatten.append(_c_var)
-
-        # calculate classification parameters grad
-        #dl_dc = tf.gradients(loss, c_vars_flatten)
-        #dl_dc_dc = []
-        #im_flatten = tf.layers.flatten(images)
-        #dl_dc_dxi = []
-        #for dl_dc_i in dl_dc:
-        #    dl_dc_dc.append(tf.gradients(dl_dc_i, c_vars_flatten))
-        #    dl_dc_dxi.append(tf.gradients(dl_dc_i, im_flatten))
-
+    def get_adv_loss_grad(self, z, y):
         dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
-        #logits_test = self.classifier(self.test_data)
-        #loss_test = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits_test, labels=self.test_labels))
-        #loss_test_grad = tf.gradients(loss_test, c_vars_flatten)
-        dlt_dxi_flat = tf.matmul(self.dlt_dc, dc_dxi)
-        ret = -tf.reshape(dlt_dxi_flat, images.shape)
-        print('adv loss grad norm=', tf.norm(ret))
+        dlt_dxi_flat = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
+        ret = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
+        #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
         return ret
 
     def load_mnist(self, labels=None):
@@ -641,7 +606,7 @@ class DCGAN(object):
             for j in range(self.y_dim):
                 if label == self.labels[j]:
                     one_hot = np.zeros(self.y_dim)
-                    one_hot[j] = 1
+                    one_hot[j] = 1.
                     final_x.append(trX[i])
                     final_y.append(one_hot)
 
@@ -651,7 +616,7 @@ class DCGAN(object):
             for j in range(self.y_dim):
                 if label == self.labels[j]:
                     one_hot = np.zeros(self.y_dim)
-                    one_hot[j] = 1
+                    one_hot[j] = 1.
                     final_x_te.append(teX[i])
                     final_y_te.append(one_hot)
 
