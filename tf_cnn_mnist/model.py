@@ -269,13 +269,6 @@ class DCGAN(object):
                                                    })
                     self.writer.add_summary(summary_str, counter)
 
-                    # Update C
-                    for i in range(300):
-                        _ = self.sess.run([self.c_optim], feed_dict={
-                            self.z: batch_z,
-                            self.y: batch_labels,
-                        })
-
                     # Update G network
                     _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
                                                       feed_dict={
@@ -291,6 +284,13 @@ class DCGAN(object):
                                                           self.y: batch_labels,
                                                       })
                     self.writer.add_summary(summary_str, counter)
+
+                    # Update C
+                    for i in range(300):
+                        _ = self.sess.run([self.c_optim], feed_dict={
+                            self.z: batch_z,
+                            self.y: batch_labels,
+                        })
 
                     errD_fake = self.d_loss_fake.eval({
                         self.z: batch_z,
@@ -557,14 +557,18 @@ class DCGAN(object):
     def get_classifier_loss(self, z, y):
         # todo
         return 0.
+
     def dummy(self, z, y):
         return [tf.zeros_like(z), tf.zeros_like(y)]
 
     def get_adv_loss_grad(self, z, y):
         dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
         dlt_dxi_flat = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
-        ret = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
+        ret_tf = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
         #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
+        ret = self.sess.run([ret_tf], feed_dict={
+                            self.z: z,
+                            self.y: y})
         return ret
 
     def load_mnist(self, labels=None):
