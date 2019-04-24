@@ -173,22 +173,25 @@ class DCGAN(object):
 
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
-        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='cust_loss',
+        self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='PyFunc',
                                      grad=self.get_adv_loss_grad)
         self.g_loss += self.alpha*self.cust_adv_loss
 
         self.saver = tf.train.Saver()
 
     def train(self, config):
+        print(0)
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
+        print(1)
+        # todo: manual gradient descent step
         g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.g_loss, var_list=self.g_vars)
+        print(2)
         try:
             tf.global_variables_initializer().run()
         except:
             tf.initialize_all_variables().run()
-
         self.g_sum = merge_summary([self.z_sum, self.d__sum,
                                     self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
         self.d_sum = merge_summary(
@@ -196,7 +199,6 @@ class DCGAN(object):
         self.writer = SummaryWriter("./logs", self.sess.graph)
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_num, self.z_dim))
-
         if config.dataset == 'mnist':
             sample_inputs = self.data_X[0:self.sample_num]
             sample_labels = self.data_y[0:self.sample_num]
