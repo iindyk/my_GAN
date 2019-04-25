@@ -1,6 +1,7 @@
 import os
 import scipy.misc
 import numpy as np
+import resource
 
 from tf_cnn_mnist.model import DCGAN
 from tf_cnn_mnist.utils import pp, visualize, to_json, show_all_variables
@@ -13,7 +14,7 @@ flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]"
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_float("alpha", 0.05, "Adversary's risk parameter [1.]")
-flags.DEFINE_integer("batch_size", 64, "The size of batch images [64]")
+flags.DEFINE_integer("batch_size", 32, "The size of batch images [64]")
 flags.DEFINE_integer("input_height", 28, "The size of image to use (will be center cropped). [108]")
 flags.DEFINE_integer("input_width", None,
                      "The size of image to use (will be center cropped). If None, same value as input_height [None]")
@@ -46,12 +47,15 @@ def main(_):
 
     # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
     run_config = tf.ConfigProto()
+    #run_config = tf.ConfigProto(device_count={'GPU': 0})
+    run_opts = tf.RunOptions(report_tensor_allocations_upon_oom=True)
     run_config.gpu_options.allow_growth = True
 
     with tf.Session(config=run_config) as sess:
         if FLAGS.dataset == 'mnist':
             dcgan = DCGAN(
                 sess,
+                run_opts=run_opts,
                 alpha=FLAGS.alpha,
                 input_width=FLAGS.input_width,
                 input_height=FLAGS.input_height,
@@ -59,6 +63,12 @@ def main(_):
                 output_height=FLAGS.output_height,
                 batch_size=FLAGS.batch_size,
                 sample_num=FLAGS.batch_size,
+                ###
+                gf_dim=32,
+                gfc_dim=256,
+                dfc_dim=256,
+                df_dim=32,
+                ###
                 y_dim=3,
                 z_dim=FLAGS.generate_test_images,
                 dataset_name=FLAGS.dataset,
@@ -82,4 +92,10 @@ def main(_):
 
 
 if __name__ == '__main__':
+    # setting max heap size limit
+    rsrc = resource.RLIMIT_DATA
+    _, hard = resource.getrlimit(rsrc)
+    resource.setrlimit(rsrc, ((1024 ** 3) * 9, hard))
+    soft, hard = resource.getrlimit(rsrc)
+    print('Soft RAM limit set to:', soft / (1024 ** 3), 'GB')
     tf.app.run()

@@ -16,7 +16,7 @@ def conv_out_size_same(size, stride):
 
 
 class DCGAN(object):
-    def __init__(self, sess, alpha, input_height=108, input_width=108, crop=True,
+    def __init__(self, sess, run_opts, alpha, input_height=108, input_width=108, crop=True,
                  batch_size=64, sample_num=64, output_height=64, output_width=64,
                  y_dim=None, z_dim=100, gf_dim=64, df_dim=64,
                  gfc_dim=1024, dfc_dim=1024, c_dim=3, dataset_name='default',
@@ -38,6 +38,7 @@ class DCGAN(object):
         self.crop = crop
         self.labels = labels
         self.alpha = alpha
+        self.run_opts = run_opts
 
         self.batch_size = batch_size
         self.sample_num = sample_num
@@ -266,7 +267,7 @@ class DCGAN(object):
                                                        self.inputs: batch_images,
                                                        self.z: batch_z,
                                                        self.y: batch_labels,
-                                                   })
+                                                   }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
                     # Update G network
@@ -274,7 +275,7 @@ class DCGAN(object):
                                                       feed_dict={
                                                           self.z: batch_z,
                                                           self.y: batch_labels,
-                                                      })
+                                                      }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
@@ -282,15 +283,15 @@ class DCGAN(object):
                                                       feed_dict={
                                                           self.z: batch_z,
                                                           self.y: batch_labels,
-                                                      })
+                                                      }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
                     # Update C
-                    for i in range(300):
+                    for i in range(100):
                         _ = self.sess.run([self.c_optim], feed_dict={
                             self.z: batch_z,
                             self.y: batch_labels,
-                        })
+                        }, options=self.run_opts)
 
                     errD_fake = self.d_loss_fake.eval({
                         self.z: batch_z,
@@ -318,7 +319,7 @@ class DCGAN(object):
                                 self.z: sample_z,
                                 self.inputs: sample_inputs,
                                 self.y: sample_labels,
-                            }
+                            }, options=self.run_opts
                         )
                         save_images(samples, image_manifold_size(samples.shape[0]),
                                     './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
@@ -330,7 +331,8 @@ class DCGAN(object):
                                 feed_dict={
                                     self.z: sample_z,
                                     self.inputs: sample_inputs,
-                                },
+
+                                }, options=self.run_opts
                             )
                             save_images(samples, image_manifold_size(samples.shape[0]),
                                         './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
@@ -514,8 +516,8 @@ class DCGAN(object):
     def classifier(self, images):
         with tf.variable_scope("classifier", reuse=tf.AUTO_REUSE) as scope:
             #scope.reuse_variables()
-            n_hidden_1 = 256  # 1st layer number of neurons
-            n_hidden_2 = 256  # 2nd layer number of neurons
+            n_hidden_1 = 32  # 1st layer number of neurons
+            n_hidden_2 = 32  # 2nd layer number of neurons
             n_input = 784  # MNIST data input (img shape: 28*28)
             n_classes = 3  # MNIST total classes (0-9 digits)
             # create a supervector containing all variables
@@ -568,7 +570,7 @@ class DCGAN(object):
         #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
         ret = self.sess.run([ret_tf], feed_dict={
                             self.z: z,
-                            self.y: y})
+                            self.y: y}, options=self.run_opts)
         return ret
 
     def load_mnist(self, labels=None):
