@@ -181,7 +181,7 @@ class DCGAN(object):
         #                                Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
         #                                name='Pyfuncgrad')
         self.cust_adv_grad = py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
-                                        Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
+                                        Tout=[tf.float32],
                                         name='Pyfuncgrad', grad=self.dummy)
 
         self.saver = tf.train.Saver()
@@ -287,7 +287,7 @@ class DCGAN(object):
                     self.writer.add_summary(summary_str, counter)
 
                     # Update C
-                    for i in range(100):
+                    for i in range(50):
                         _ = self.sess.run([self.c_optim], feed_dict={
                             self.z: batch_z,
                             self.y: batch_labels,
@@ -516,8 +516,8 @@ class DCGAN(object):
     def classifier(self, images):
         with tf.variable_scope("classifier", reuse=tf.AUTO_REUSE) as scope:
             #scope.reuse_variables()
-            n_hidden_1 = 32  # 1st layer number of neurons
-            n_hidden_2 = 32  # 2nd layer number of neurons
+            n_hidden_1 = 8  # 1st layer number of neurons
+            n_hidden_2 = 8  # 2nd layer number of neurons
             n_input = 784  # MNIST data input (img shape: 28*28)
             n_classes = 3  # MNIST total classes (0-9 digits)
             # create a supervector containing all variables
@@ -564,11 +564,12 @@ class DCGAN(object):
         return [tf.zeros_like(z), tf.zeros_like(y)]
 
     def get_adv_loss_grad(self, z, y):
-        dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
+        #dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
+        dc_dxi = tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi)
         dlt_dxi_flat = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
-        ret_tf = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
+        #ret_tf = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
         #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
-        ret = self.sess.run([ret_tf], feed_dict={
+        ret = self.sess.run([dlt_dxi_flat], feed_dict={
                             self.z: z,
                             self.y: y}, options=self.run_opts)
         return ret
