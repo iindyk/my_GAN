@@ -174,15 +174,9 @@ class DCGAN(object):
 
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
-        #self.cust_adv_loss = py_func(self.get_classifier_loss, [self.G, self.y], tf.float32, name='PyFunc',
-        #                             grad=self.get_adv_loss_grad)
-        #self.g_loss += self.alpha*self.cust_adv_loss
-        #self.cust_adv_grad = tf.py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
-        #                                Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
-        #                                name='Pyfuncgrad')
-        self.cust_adv_grad = py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
-                                        Tout=[tf.float32],
-                                        name='Pyfuncgrad', grad=self.dummy)
+
+        dc_dxi = tf.stop_gradient(tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi))
+        self.cust_adv_grad = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
 
         self.saver = tf.train.Saver()
 
@@ -539,24 +533,6 @@ class DCGAN(object):
             # Output fully connected layer with a neuron for each class
             out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
             return out_layer
-
-    def get_classifier_loss(self, z, y):
-        # todo
-        return 0.
-
-    def dummy(self, z, y):
-        return [tf.zeros_like(z), tf.zeros_like(y)]
-
-    def get_adv_loss_grad(self, z, y):
-        #dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
-        dc_dxi = tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi)
-        dlt_dxi_flat = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
-        #ret_tf = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
-        #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
-        ret = self.sess.run([dlt_dxi_flat], feed_dict={
-                            self.z: z,
-                            self.y: y}, options=self.run_opts)
-        return ret
 
     def load_mnist(self, labels=None):
         if labels:

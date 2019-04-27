@@ -3,14 +3,14 @@ import scipy.misc
 import numpy as np
 import resource
 
-from tf_cnn_mnist.model import DCGAN
+from tf_cnn_mnist.model_alt import DCGAN
 from tf_cnn_mnist.utils import pp, visualize, to_json, show_all_variables
 
 import tensorflow as tf
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
+flags.DEFINE_float("learning_rate", 0.01, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_float("alpha", 0.5, "Adversary's risk parameter [1.]")
@@ -46,8 +46,8 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-    #run_config = tf.ConfigProto()
-    run_config = tf.ConfigProto(device_count={'GPU': 0})
+    run_config = tf.ConfigProto()
+    #run_config = tf.ConfigProto(device_count={'GPU': 0})
     run_opts = tf.RunOptions(report_tensor_allocations_upon_oom=True)
     run_config.gpu_options.allow_growth = True
 
