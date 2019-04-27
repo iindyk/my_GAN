@@ -175,22 +175,22 @@ class DCGAN(object):
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
 
-        dc_dxi = tf.stop_gradient(tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi))
-        self.cust_adv_grad = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
+        dc_dxi = tf.stop_gradient(tf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
+        self.cust_adv_grad = -tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
+
 
         self.saver = tf.train.Saver()
 
     def train(self, config):
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        #g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-        #    .minimize(self.g_loss, var_list=self.g_vars)
+
         new_g_vars = []
         g_accumulation = []
         new_g_accumulation = []
         n_g_vars = len(self.g_vars)
         g_grad = tf.gradients(ys=self.g_loss, xs=self.g_vars)
-        g_adv_grad = tf.gradients(ys=tf.tensordot(self.cust_adv_grad, self.G, axes=[[0, 1, 2], [0, 1, 2]]), xs=self.g_vars)
+        g_adv_grad = tf.gradients(ys=tf.matmul(self.cust_adv_grad, tf.reshape(self.G, (-1, 1))), xs=self.g_vars)
         for i in range(n_g_vars):
             g_accumulation.append(tf.get_variable('accum_g' + str(i), shape=g_grad[i].get_shape(), trainable=False))
             new_g_accumulation.append(
@@ -263,6 +263,13 @@ class DCGAN(object):
                                                    }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
+                    # Update C
+                    for i in range(50):
+                        _ = self.sess.run([self.c_optim], feed_dict={
+                            self.z: batch_z,
+                            self.y: batch_labels,
+                        }, options=self.run_opts)
+
                     # Update G network
                     _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
                                                       feed_dict={
@@ -279,12 +286,6 @@ class DCGAN(object):
                                                       }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
-                    # Update C
-                    for i in range(50):
-                        _ = self.sess.run([self.c_optim], feed_dict={
-                            self.z: batch_z,
-                            self.y: batch_labels,
-                        }, options=self.run_opts)
 
                     errD_fake = self.d_loss_fake.eval({
                         self.z: batch_z,
@@ -304,7 +305,7 @@ class DCGAN(object):
                       % (epoch, idx, batch_idxs,
                          time.time() - start_time, errD_fake + errD_real, errG))
 
-                if np.mod(counter, 50) == 1:
+                if np.mod(counter, 50) == 2:
                     if config.dataset == 'mnist' or config.dataset == 'celebA':
                         samples, d_loss, g_loss = self.sess.run(
                             [self.sampler, self.d_loss, self.g_loss],
@@ -504,23 +505,17 @@ class DCGAN(object):
             _n1 = (n_input+1)*n_hidden_1
             _n2 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2
             self._n3 = (n_input+1)*n_hidden_1+(n_hidden_1+1)*n_hidden_2+(n_hidden_2+1)*n_classes
-            self.c_sv = tf.get_variable('c_sv', [self._n], initializer=tf.truncated_normal_initializer(.2))
+            self.c_sv = tf.get_variable('c_sv', [self._n], initializer=tf.truncated_normal_initializer(0.02))
 
             # Store layers weight & bias
             weights = {
-                #'h1': tf.get_variable('c_h1', [n_input, n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
                 'h1': tf.reshape(self.c_sv[:_n1-n_hidden_1], shape=[n_input, n_hidden_1]),
-                #'h2': tf.get_variable('c_h2', [n_hidden_1, n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
                 'h2': tf.reshape(self.c_sv[_n1:_n2-n_hidden_2], shape=[n_hidden_1, n_hidden_2]),
-                #'out': tf.get_variable('c_hout', [n_hidden_2, n_classes], initializer=tf.truncated_normal_initializer(.02))
                 'out': tf.reshape(self.c_sv[_n2:self._n3-n_classes], shape=[n_hidden_2, n_classes])
             }
             biases = {
-                #'b1': tf.get_variable('c_b1', [n_hidden_1], initializer=tf.truncated_normal_initializer(.02)),
                 'b1': self.c_sv[_n1-n_hidden_1:_n1],
-                #'b2': tf.get_variable('c_b2', [n_hidden_2], initializer=tf.truncated_normal_initializer(.02)),
                 'b2': self.c_sv[_n2-n_hidden_2:_n2],
-                #'out': tf.get_variable('c_bout', [n_classes], initializer=tf.truncated_normal_initializer(.02))
                 'out': self.c_sv[self._n3-n_classes:self._n3]
             }
 

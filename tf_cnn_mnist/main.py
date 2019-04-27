@@ -46,8 +46,8 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-    run_config = tf.ConfigProto()
-    #run_config = tf.ConfigProto(device_count={'GPU': 0})
+    #run_config = tf.ConfigProto()
+    run_config = tf.ConfigProto(device_count={'GPU': 0})
     run_opts = tf.RunOptions(report_tensor_allocations_upon_oom=True)
     run_config.gpu_options.allow_growth = True
 
