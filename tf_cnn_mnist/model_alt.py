@@ -183,6 +183,7 @@ class DCGAN(object):
         self.saver = tf.train.Saver()
 
     def train(self, config):
+        #todo: pretrain G
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
 
@@ -267,14 +268,23 @@ class DCGAN(object):
                                                    }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
-                    # Update C
-                    for i in range(100):
-                        _ = self.sess.run([self.c_optim], feed_dict={
-                            self.z: batch_z,
-                            self.y: batch_labels,
-                        }, options=self.run_opts)
+                    if epoch*batch_idxs+idx>config.g_pretrain:
+                        # Update C
+                        for i in range(100):
+                            _ = self.sess.run([self.c_optim], feed_dict={
+                                                self.z: batch_z,
+                                                self.y: batch_labels,
+                                                }, options=self.run_opts)
 
-                    # Update G network
+                        # adversarial optimization
+                        _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
+                                                          feed_dict={
+                                                            self.z: batch_z,
+                                                            self.y: batch_labels,
+                                                            }, options=self.run_opts)
+                        self.writer.add_summary(summary_str, counter)
+
+                    # Update G network twice
                     _, summary_str = self.sess.run([g_optim, self.g_sum],
                                                    feed_dict={
                                                           self.z: batch_z,
@@ -287,16 +297,6 @@ class DCGAN(object):
                                                        self.y: batch_labels,
                                                    }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
-
-                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
-                                                      feed_dict={
-                                                          self.z: batch_z,
-                                                          self.y: batch_labels,
-                                                      }, options=self.run_opts)
-                    self.writer.add_summary(summary_str, counter)
-
-
 
                     errD_fake = self.d_loss_fake.eval({
                         self.z: batch_z,

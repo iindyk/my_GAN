@@ -10,10 +10,11 @@ import tensorflow as tf
 
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
+flags.DEFINE_integer("g_pretrain", 1000, "Number of iterations performed without adversarial objective [1000]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
-flags.DEFINE_float("alpha", 0.001, "Adversary's risk parameter [1.]")
+flags.DEFINE_float("alpha", 0.5, "Adversary's risk parameter [1.]")
 flags.DEFINE_integer("batch_size", 24, "The size of batch images [64]")
 flags.DEFINE_integer("input_height", 28, "The size of image to use (will be center cropped). [108]")
 flags.DEFINE_integer("input_width", None,
