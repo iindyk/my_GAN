@@ -175,7 +175,8 @@ class DCGAN(object):
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
 
-        dc_dxi = tf.stop_gradient(tf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
+        #dc_dxi = tf.stop_gradienttf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
+        dc_dxi = tf.stop_gradient(tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi))
         self.cust_adv_grad = -tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
 
 
@@ -184,6 +185,9 @@ class DCGAN(object):
     def train(self, config):
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
+
+        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+            .minimize(self.g_loss, var_list=self.g_vars)
 
         new_g_vars = []
         g_accumulation = []
@@ -264,18 +268,24 @@ class DCGAN(object):
                     self.writer.add_summary(summary_str, counter)
 
                     # Update C
-                    for i in range(50):
+                    for i in range(100):
                         _ = self.sess.run([self.c_optim], feed_dict={
                             self.z: batch_z,
                             self.y: batch_labels,
                         }, options=self.run_opts)
 
                     # Update G network
-                    _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
-                                                      feed_dict={
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                                   feed_dict={
                                                           self.z: batch_z,
                                                           self.y: batch_labels,
                                                       }, options=self.run_opts)
+                    self.writer.add_summary(summary_str, counter)
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                                   feed_dict={
+                                                       self.z: batch_z,
+                                                       self.y: batch_labels,
+                                                   }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
@@ -285,6 +295,7 @@ class DCGAN(object):
                                                           self.y: batch_labels,
                                                       }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
+
 
 
                     errD_fake = self.d_loss_fake.eval({
@@ -315,7 +326,7 @@ class DCGAN(object):
                                 self.y: sample_labels,
                             }, options=self.run_opts
                         )
-                        save_images(samples, (2, 4),
+                        save_images(samples, (4, 6),
                                     './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
                         print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
 

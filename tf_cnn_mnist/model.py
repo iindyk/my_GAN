@@ -181,7 +181,7 @@ class DCGAN(object):
         #                                Tout=[tf.float32, tf.float32, tf.float32, tf.float32],
         #                                name='Pyfuncgrad')
         self.cust_adv_grad = py_func(self.get_adv_loss_grad, inp=[self.z, self.y],
-                                        Tout=[tf.float32],
+                                        Tout=tf.float32,
                                         name='Pyfuncgrad', grad=self.dummy)
 
         self.saver = tf.train.Saver()
@@ -270,11 +270,12 @@ class DCGAN(object):
                     self.writer.add_summary(summary_str, counter)
 
                     # Update G network
-                    _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
+                    _, g_acc, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
                                                       feed_dict={
                                                           self.z: batch_z,
                                                           self.y: batch_labels,
                                                       }, options=self.run_opts)
+                    print(np.sum(g_acc))
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
@@ -549,8 +550,9 @@ class DCGAN(object):
 
     def get_adv_loss_grad(self, z, y):
         #dc_dxi = -tf.matmul(tf.linalg.inv(self.dl_dc_dc), self.dl_dc_dxi)
-        dc_dxi = tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi)
-        dlt_dxi_flat = tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
+        #dc_dxi = tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi)
+        dc_dxi = tf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True)
+        dlt_dxi_flat = -tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
         #ret_tf = -tf.reshape(dlt_dxi_flat, shape=[self.batch_size, self.input_height, self.input_height, 1])
         #print('adv loss grad norm=', tf.norm(ret).eval(session=self.sess))
         ret = self.sess.run([dlt_dxi_flat], feed_dict={
