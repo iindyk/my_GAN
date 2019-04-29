@@ -268,7 +268,7 @@ class DCGAN(object):
                                                    }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
-                    if epoch*batch_idxs+idx>config.g_pretrain:
+                    if counter > config.g_pretrain:
                         # Update C
                         for i in range(100):
                             _, _ = self.sess.run([self.c_optim, self.c_loss_train], feed_dict={
