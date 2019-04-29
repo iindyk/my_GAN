@@ -271,13 +271,13 @@ class DCGAN(object):
                     if epoch*batch_idxs+idx>config.g_pretrain:
                         # Update C
                         for i in range(100):
-                            _ = self.sess.run([self.c_optim], feed_dict={
+                            _, _ = self.sess.run([self.c_optim, self.c_loss_train], feed_dict={
                                                 self.z: batch_z,
                                                 self.y: batch_labels,
                                                 }, options=self.run_opts)
 
                         # adversarial optimization
-                        _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.g_sum],
+                        _, _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.c_loss_train, self.g_sum],
                                                           feed_dict={
                                                             self.z: batch_z,
                                                             self.y: batch_labels,
