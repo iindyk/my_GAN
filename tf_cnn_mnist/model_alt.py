@@ -114,6 +114,8 @@ class DCGAN(object):
         else:
             self.y = None
 
+        self.y_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5), self.y_dim], name='y_c')
+
         if self.crop:
             image_dims = [self.output_height, self.output_width, self.c_dim]
         else:
@@ -122,6 +124,8 @@ class DCGAN(object):
         self.inputs = tf.placeholder(
             tf.float32, [self.batch_size] + image_dims, name='real_images')
 
+        self.x_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5)] + image_dims, name='x_c')
+
         inputs = self.inputs
 
         self.z = tf.placeholder(
@@ -129,7 +133,7 @@ class DCGAN(object):
         self.z_sum = histogram_summary("z", self.z)
 
         self.G = self.generator(self.z, self.y)
-        self.C_train = self.classifier(self.G)
+        self.C_train = self.classifier(tf.concat([self.G, self.x_c], axis=0))
         self.C_test = self.classifier(self.test_data)
         self.D, self.D_logits = self.discriminator(inputs, self.y, reuse=False)
         self.sampler = self.sampler(self.z, self.y)
@@ -142,7 +146,7 @@ class DCGAN(object):
         def sigmoid_cross_entropy_with_logits(x, y):
             return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, labels=y)
 
-        self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, self.y))
+        self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, tf.concat([self.y, self.y_c], axis=0)))
         self.c_loss_test = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_test, self.test_labels))
         self.d_loss_real = tf.reduce_mean(
             sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
@@ -177,7 +181,7 @@ class DCGAN(object):
 
         #dc_dxi = tf.stop_gradienttf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
         dc_dxi = tf.stop_gradient(tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi))
-        self.cust_adv_grad = -tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)
+        self.cust_adv_grad = -tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi))
 
 
         self.saver = tf.train.Saver()
@@ -254,6 +258,10 @@ class DCGAN(object):
                 batch_images = self.data_X[idx * config.batch_size:(idx + 1) * config.batch_size]
                 batch_labels = self.data_y[idx * config.batch_size:(idx + 1) * config.batch_size]
 
+                tr_indices = np.random.randint(0, len(self.data_y), size=int(self.batch_size*1.5))
+                x_tr = self.data_X[tr_indices]
+                y_tr = self.data_y[tr_indices]
+
                 batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]) \
                     .astype(np.float32)
 
@@ -274,13 +282,17 @@ class DCGAN(object):
                             _, _ = self.sess.run([self.c_optim, self.c_loss_train], feed_dict={
                                                 self.z: batch_z,
                                                 self.y: batch_labels,
+                                                self.x_c: x_tr,
+                                                self.y_c: y_tr,
                                                 }, options=self.run_opts)
 
                         # adversarial optimization
                         _, _, _, summary_str = self.sess.run([new_g_vars, new_g_accumulation, self.c_loss_train, self.g_sum],
-                                                          feed_dict={
-                                                            self.z: batch_z,
-                                                            self.y: batch_labels,
+                                                             feed_dict={
+                                                                self.z: batch_z,
+                                                                self.y: batch_labels,
+                                                                self.x_c: x_tr,
+                                                                self.y_c: y_tr,
                                                             }, options=self.run_opts)
                         self.writer.add_summary(summary_str, counter)
 
@@ -316,7 +328,7 @@ class DCGAN(object):
                       % (epoch, idx, batch_idxs,
                          time.time() - start_time, errD_fake + errD_real, errG))
 
-                if np.mod(counter, 50) == 2:
+                if np.mod(counter, 20) == 2:
                     if config.dataset == 'mnist' or config.dataset == 'celebA':
                         samples, d_loss, g_loss = self.sess.run(
                             [self.sampler, self.d_loss, self.g_loss],
@@ -532,8 +544,10 @@ class DCGAN(object):
 
             # Create model
             # Hidden fully connected layer with 256 neurons
-            tf.assign(self.c_sv[self._n3:], tf.reshape(images, [-1]))
-            layer_1 = tf.add(tf.matmul(tf.reshape(self.c_sv[self._n3:], (-1, n_input)), weights['h1']), biases['b1'])
+            tf.assign(self.c_sv[self._n3:], tf.reshape(images[:self.batch_size], [-1]))
+            layer_1 = tf.add(tf.matmul(tf.concat([tf.reshape(self.c_sv[self._n3:], (-1, n_input)),
+                                                 tf.reshape(images[self.batch_size:], (-1, n_input))], axis=0),
+                                       weights['h1']), biases['b1'])
             # Hidden fully connected layer with 256 neurons
             layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
             # Output fully connected layer with a neuron for each class
