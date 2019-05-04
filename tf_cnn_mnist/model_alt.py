@@ -114,7 +114,7 @@ class DCGAN(object):
         else:
             self.y = None
 
-        self.y_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5), self.y_dim], name='y_c')
+        #self.y_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5), self.y_dim], name='y_c')
 
         if self.crop:
             image_dims = [self.output_height, self.output_width, self.c_dim]
@@ -124,7 +124,7 @@ class DCGAN(object):
         self.inputs = tf.placeholder(
             tf.float32, [self.batch_size] + image_dims, name='real_images')
 
-        self.x_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5)] + image_dims, name='x_c')
+        #self.x_c = tf.placeholder(tf.float32, [int(self.batch_size*1.5)] + image_dims, name='x_c')
 
         inputs = self.inputs
 
@@ -133,7 +133,8 @@ class DCGAN(object):
         self.z_sum = histogram_summary("z", self.z)
 
         self.G = self.generator(self.z, self.y)
-        self.C_train = self.classifier(tf.concat([self.G, self.x_c], axis=0))
+        #self.C_train = self.classifier(tf.concat([self.G, self.x_c], axis=0))
+        self.C_train = self.classifier(self.G)
         self.C_test = self.classifier(self.test_data)
         self.D, self.D_logits = self.discriminator(inputs, self.y, reuse=False)
         self.sampler = self.sampler(self.z, self.y)
@@ -146,7 +147,8 @@ class DCGAN(object):
         def sigmoid_cross_entropy_with_logits(x, y):
             return tf.nn.sigmoid_cross_entropy_with_logits(logits=x, labels=y)
 
-        self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, tf.concat([self.y, self.y_c], axis=0)))
+        #self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, tf.concat([self.y, self.y_c], axis=0)))
+        self.c_loss_train = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_train, self.y))
         self.c_loss_test = tf.reduce_mean(sigmoid_cross_entropy_with_logits(self.C_test, self.test_labels))
         self.d_loss_real = tf.reduce_mean(
             sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
@@ -179,8 +181,11 @@ class DCGAN(object):
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
 
-        #dc_dxi = tf.stop_gradienttf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
-        dc_dxi = tf.stop_gradient(tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi))
+        #dc_dxi = tf.stop_gradient(tf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
+
+        dc_dxi = tf.stop_gradient(tf.cond(tf.abs(tf.linalg.det(self.dl_dc_dc)) > 1e-4,
+                                          lambda: tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi),
+                                          lambda: tf.matmul(tf.ones(tf.shape(self.dl_dc_dc)), self.dl_dc_dxi)))
         self.cust_adv_grad = -tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi))
 
 
@@ -282,8 +287,8 @@ class DCGAN(object):
                             _, _ = self.sess.run([self.c_optim, self.c_loss_train], feed_dict={
                                                 self.z: batch_z,
                                                 self.y: batch_labels,
-                                                self.x_c: x_tr,
-                                                self.y_c: y_tr,
+                                                #self.x_c: x_tr,
+                                                #self.y_c: y_tr,
                                                 }, options=self.run_opts)
 
                         # adversarial optimization
@@ -291,8 +296,8 @@ class DCGAN(object):
                                                              feed_dict={
                                                                 self.z: batch_z,
                                                                 self.y: batch_labels,
-                                                                self.x_c: x_tr,
-                                                                self.y_c: y_tr,
+                                                                #self.x_c: x_tr,
+                                                                #self.y_c: y_tr,
                                                             }, options=self.run_opts)
                         self.writer.add_summary(summary_str, counter)
 
