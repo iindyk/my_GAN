@@ -174,19 +174,19 @@ class DCGAN(object):
         self.dl_dc_dxi_mixed = tf.hessians(self.c_loss_train, self.c_sv)[0]
 
         self.dlt_dc = tf.gradients(self.c_loss_test, self.c_sv)[0][:self._n3]
-        self.dl_dc_dc = self.dl_dc_dxi_mixed[:self._n3, :self._n3]
+        self.dl_dc_dc = self.dl_dc_dxi_mixed[:self._n3, :self._n3]+tf.eye(self._n3)*1e-3
         self.dl_dc_dxi = self.dl_dc_dxi_mixed[:self._n3, self._n3:]
 
 
         # define custom part of adversary's loss as tensor
         self.c_optim = tf.train.AdamOptimizer(0.001).minimize(self.c_loss_train, var_list=self.c_sv)
 
-        #dc_dxi = tf.stop_gradient(tf.linalg.lstsq(self.dl_dc_dc, self.dl_dc_dxi, fast=True))
+        dc_dxi = tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi)
 
-        dc_dxi = tf.stop_gradient(tf.cond(tf.abs(tf.linalg.det(self.dl_dc_dc)) > 1e-4,
-                                          lambda: tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi),
-                                          lambda: tf.matmul(tf.ones(tf.shape(self.dl_dc_dc)), self.dl_dc_dxi)))
-        self.cust_adv_grad = -tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi))
+        #dc_dxi = tf.stop_gradient(tf.cond(tf.abs(tf.linalg.det(self.dl_dc_dc)) > 1e-10,
+        #                                  lambda: tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi),
+        #                                  lambda: tf.matmul(tf.ones((self._n3, self._n3)), self.dl_dc_dxi)))
+        self.cust_adv_grad = -tf.stop_gradient(tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)))
 
 
         self.saver = tf.train.Saver()
@@ -347,7 +347,7 @@ class DCGAN(object):
                                     './{}/train_{:02d}_{:04d}.png'.format(config.sample_dir, epoch, idx))
                         print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
 
-                if np.mod(counter, 200) == 2:
+                if np.mod(counter, 50) == 2:
                     self.save(config.checkpoint_dir, counter)
                     print('checkpoint saved')
 
