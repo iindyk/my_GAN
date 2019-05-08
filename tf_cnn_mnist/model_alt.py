@@ -301,7 +301,7 @@ class DCGAN(object):
                                                             }, options=self.run_opts)
                         self.writer.add_summary(summary_str, counter)
 
-                    # Update G network twice
+                    # Update G network twice: experimental, not in the paper
                     _, summary_str = self.sess.run([g_optim, self.g_sum],
                                                    feed_dict={
                                                           self.z: batch_z,
