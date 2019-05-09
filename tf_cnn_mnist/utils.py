@@ -315,11 +315,11 @@ def visualize(sess, dcgan, config, option):
                                 './samples/test/test_%s-%s_%s.png' % (y[i]+7, idx, num))
 
     elif option == 7:
-        n_trials = 1000
+        n_trials = 10
         n_t = 100
         sample_from_orig = False  # sample generated data from original
         data_shift = 0
-        validation_crit_val = 3.1
+        validation_crit_val = -.5
         skip_validation = False
         gen_share = 0.4  # % of training set to be generated
         n_orig = int(n_t * (1 - gen_share))
@@ -344,22 +344,29 @@ def visualize(sess, dcgan, config, option):
         t_vars = tf.trainable_variables()
         c_vars = [var for var in t_vars if 'cl_' in var.name]
         c_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=c_train, labels=y_c_placeholder)
-        c_optim = tf.train.AdamOptimizer(0.001).minimize(c_loss, var_list=c_vars)
+        optimizer = tf.train.AdamOptimizer(0.001)
+        c_optim = optimizer.minimize(c_loss, var_list=c_vars)
+
+        for c_var in c_vars:
+            sess.run(c_var.initializer)
+        for opt_var in optimizer.variables():
+            sess.run(opt_var.initializer)
 
         d_x = dcgan.discriminator(x_placeholder, y=y_placeholder, reuse=True)
-        val1, _ = sess.run(d_x, feed_dict={
+
+        _, val1 = sess.run(d_x, feed_dict={
             x_placeholder: _dt_tmp[:config.batch_size],
             y_placeholder: _lb_tmp[:config.batch_size]})
-        val2, _ = sess.run(d_x, feed_dict={
+        _, val2 = sess.run(d_x, feed_dict={
             x_placeholder: _dt_tmp[config.batch_size:2*config.batch_size],
             y_placeholder: _lb_tmp[config.batch_size:2*config.batch_size]})
-        val3, _ = sess.run(d_x, feed_dict={
+        _, val3 = sess.run(d_x, feed_dict={
             x_placeholder: _dt_tmp[2*config.batch_size:3*config.batch_size],
             y_placeholder: _lb_tmp[2*config.batch_size:3*config.batch_size]})
         val = np.append(np.append(val1, val2, axis=0), val3, axis=0)
 
         for k in range(n_orig):
-            if val[k, 0] <= validation_crit_val:
+            if val[k, 0] < validation_crit_val:
                 false_pos += 1
 
         for trial in range(n_trials):
@@ -402,21 +409,20 @@ def visualize(sess, dcgan, config, option):
                 else:
                     x_batch = np.append(train_data_tmp[j * config.batch_size:], np.zeros(((j + 1) * config.batch_size - n_t, 28, 28, 1)),
                                         axis=0)
-                    y_batch = np.append(train_labels_tmp[j * config.batch_size:], [[0., 1.]] * ((j + 1) * config.batch_size - n_t),
+                    y_batch = np.append(train_labels_tmp[j * config.batch_size:], [[0., 0., 1.]] * ((j + 1) * config.batch_size - n_t),
                                         axis=0)
 
                 # calculate statistics values
-                stat_vals = sess.run(d_x, feed_dict={
-                    x_placeholder: np.reshape(x_batch, newshape=[config.batch_size, 28, 28, 1]),
+                _, stat_vals = sess.run(d_x, feed_dict={
+                    x_placeholder: x_batch,
                     y_placeholder: y_batch})
                 for k in range(config.batch_size):
                     if k + j * config.batch_size < n_t:
                         was_generated = (k + j * config.batch_size >= int(n_t * (1 - gen_share))) and not sample_from_orig
-                        print(np.shape(stat_vals))
                         validation_success = stat_vals[k, 0] > validation_crit_val or skip_validation
                         if validation_success:
-                            train_data.append(np.reshape(x_batch[k], newshape=784))
-                            train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
+                            train_data.append(x_batch[k])
+                            train_labels.append(y_batch[k])
 
                         if validation_success and was_generated:
                             false_neg[trial] += 1
