@@ -28,15 +28,15 @@ def show_images(images, cols=1, titles=None):
     plt.show()
 
 
-im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/5vs6/'
-labels = ['5', '6']
-alphas = ['0.0', '0.25', '0.5', '0.75', '1.0', '10.0']
+im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/7vs8vs9/'
+labels = ['7', '8', '9']
+alphas = ['0.0', '0.25', '0.5', '0.75', '1.', '10.']
 im_list = []
 titles = []
 for l in labels:
     for a in alphas:
         im_list.append(Image.open(im_dir+a+'_'+l+'.jpg'))
         titles.append(l+'s, alpha='+a)
-show_images(im_list, cols=2, titles=['']*len(im_list))
+show_images(im_list, cols=3, titles=['']*len(im_list))
 
 
