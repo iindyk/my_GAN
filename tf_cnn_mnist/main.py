@@ -82,7 +82,7 @@ def main(_):
                 raise Exception("[!] Train a model first, then run test mode")
 
         # Below is codes for visualization
-        OPTION = 6
+        OPTION = 7
         visualize(sess, dcgan, FLAGS, OPTION)
 
 

@@ -10,6 +10,8 @@ import scipy.misc
 import numpy as np
 from time import gmtime, strftime
 from six.moves import xrange
+from sklearn.metrics import accuracy_score
+import tf_cnn_mnist.classifier as cl
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -311,6 +313,132 @@ def visualize(sess, dcgan, config, option):
                 for i in range(config.batch_size):
                     save_images(np.reshape(samples[i], newshape=(1, 28, 28, 1)), [1, 1],
                                 './samples/test/test_%s-%s_%s.png' % (y[i]+7, idx, num))
+
+    elif option == 7:
+        n_trials = 1000
+        n_t = 100
+        sample_from_orig = False  # sample generated data from original
+        data_shift = 0
+        validation_crit_val = 3.1
+        skip_validation = False
+        gen_share = 0.4  # % of training set to be generated
+        n_orig = int(n_t * (1 - gen_share))
+
+        dcgan.data_X, dcgan.data_y, dcgan.test_data, dcgan.test_labels = dcgan.load_mnist()
+
+        errs = []
+        false_neg = []
+
+        # false positive rate calculation
+        false_pos = 0
+        _dt_tmp = np.reshape(np.append(np.reshape(dcgan.data_X[data_shift:n_orig + data_shift], newshape=(-1, 784)),
+                            np.zeros((3*config.batch_size - n_orig, 784)), axis=0), newshape=(-1, 28, 28, 1))
+        _lb_tmp = np.append(dcgan.data_y[data_shift:n_orig + data_shift],
+                            [[0., 0., 1.]]*(3*config.batch_size - n_orig), axis=0)
+        x_placeholder = tf.placeholder("float", shape=[config.batch_size, 28, 28, 1])
+        y_placeholder = tf.placeholder("float", shape=[config.batch_size, 3])
+
+        x_c_placeholder = tf.placeholder("float", shape=[None, 28, 28, 1])
+        y_c_placeholder = tf.placeholder("float", shape=[None, 3])
+        c_train = cl.c(x_c_placeholder)
+        t_vars = tf.trainable_variables()
+        c_vars = [var for var in t_vars if 'cl_' in var.name]
+        c_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=c_train, labels=y_c_placeholder)
+        c_optim = tf.train.AdamOptimizer(0.001).minimize(c_loss, var_list=c_vars)
+
+        d_x = dcgan.discriminator(x_placeholder, y=y_placeholder, reuse=True)
+        val1, _ = sess.run(d_x, feed_dict={
+            x_placeholder: _dt_tmp[:config.batch_size],
+            y_placeholder: _lb_tmp[:config.batch_size]})
+        val2, _ = sess.run(d_x, feed_dict={
+            x_placeholder: _dt_tmp[config.batch_size:2*config.batch_size],
+            y_placeholder: _lb_tmp[config.batch_size:2*config.batch_size]})
+        val3, _ = sess.run(d_x, feed_dict={
+            x_placeholder: _dt_tmp[2*config.batch_size:3*config.batch_size],
+            y_placeholder: _lb_tmp[2*config.batch_size:3*config.batch_size]})
+        val = np.append(np.append(val1, val2, axis=0), val3, axis=0)
+
+        for k in range(n_orig):
+            if val[k, 0] <= validation_crit_val:
+                false_pos += 1
+
+        for trial in range(n_trials):
+            indices = np.random.randint(low=int(n_t * (1 - gen_share)) + data_shift, high=len(dcgan.data_y),
+                                        size=int(n_t * gen_share))
+            additional_y_train = dcgan.data_y[indices]
+            if sample_from_orig:
+                additional_x_train = dcgan.data_X[indices]
+            else:
+                additional_x_train = np.empty((0, 28, 28, 1), np.float32)
+                for j in range((int(n_t * gen_share)) // config.batch_size + 1):
+                    if (j + 1) * config.batch_size <= (int(n_t * gen_share)):
+                        y_batch = additional_y_train[j * config.batch_size:(j + 1) * config.batch_size]
+                    else:
+                        y_batch = np.append(additional_y_train[j * config.batch_size:],
+                                            [[0., 0., 1.]] * ((j + 1) * config.batch_size - int(n_t * gen_share)),
+                                            axis=0)
+
+                    z_sample = np.random.uniform(-1, 1, size=(config.batch_size, dcgan.z_dim))
+                    sample = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample, dcgan.y: y_batch})
+
+                    additional_x_train = np.append(additional_x_train,
+                                                   np.reshape(sample, newshape=(-1, 28, 28, 1)), axis=0)
+
+            train_data_tmp = np.append(dcgan.data_X[data_shift:int(n_t * (1 - gen_share)) + data_shift],
+                                        additional_x_train[:int(n_t * gen_share)], axis=0)
+            train_labels_tmp = np.append(dcgan.data_y[data_shift:int(n_t * (1 - gen_share)) + data_shift],
+                                         additional_y_train[:int(n_t * gen_share)], axis=0)
+
+            train_data = []
+            train_labels = []
+
+            false_neg.append(0)
+
+            # validation
+            for j in range(n_t // config.batch_size + 1):
+                if (j + 1) * config.batch_size <= n_t:
+                    x_batch = train_data_tmp[j * config.batch_size:(j + 1) * config.batch_size]
+                    y_batch = train_labels_tmp[j * config.batch_size:(j + 1) * config.batch_size]
+                else:
+                    x_batch = np.append(train_data_tmp[j * config.batch_size:], np.zeros(((j + 1) * config.batch_size - n_t, 28, 28, 1)),
+                                        axis=0)
+                    y_batch = np.append(train_labels_tmp[j * config.batch_size:], [[0., 1.]] * ((j + 1) * config.batch_size - n_t),
+                                        axis=0)
+
+                # calculate statistics values
+                stat_vals = sess.run(d_x, feed_dict={
+                    x_placeholder: np.reshape(x_batch, newshape=[config.batch_size, 28, 28, 1]),
+                    y_placeholder: y_batch})
+                for k in range(config.batch_size):
+                    if k + j * config.batch_size < n_t:
+                        was_generated = (k + j * config.batch_size >= int(n_t * (1 - gen_share))) and not sample_from_orig
+                        print(np.shape(stat_vals))
+                        validation_success = stat_vals[k, 0] > validation_crit_val or skip_validation
+                        if validation_success:
+                            train_data.append(np.reshape(x_batch[k], newshape=784))
+                            train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
+
+                        if validation_success and was_generated:
+                            false_neg[trial] += 1
+            # calculate classification error
+            for i in range(1000):
+                _ = sess.run(c_optim, feed_dict={
+                    x_c_placeholder: train_data,
+                    y_c_placeholder: train_labels
+                })
+            predicted_labels = sess.run(c_train, feed_dict={
+                x_c_placeholder: dcgan.test_data
+            })
+
+            err = 1-accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
+            errs.append(err)
+
+        print('error=', np.mean(errs) * 100, '+-', (np.std(errs) * 1.96 / np.sqrt(n_trials)) * 100)
+
+        if not skip_validation:
+            print('false negative=', (np.mean(false_neg) / (n_t * gen_share)) * 100,
+                '+-', (np.std(false_neg) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+            print('false positive=', false_pos / n_orig * 100)
 
 
 def image_manifold_size(num_images):

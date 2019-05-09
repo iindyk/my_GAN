@@ -612,8 +612,8 @@ class DCGAN(object):
                     final_x_te.append(teX[i])
                     final_y_te.append(one_hot)
 
-        return np.array(final_x) / 127.5 - 1., np.array(final_y), np.array(final_x[:self.batch_size]).astype(np.float32)/127.5-1., \
-               np.array(final_y_te[:self.batch_size]).astype(np.float32)
+        return np.array(final_x) / 127.5 - 1., np.array(final_y), np.array(final_x_te).astype(np.float32)/127.5-1., \
+               np.array(final_y_te).astype(np.float32)
 
     @property
     def model_dir(self):
