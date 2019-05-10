@@ -37,7 +37,7 @@ def c(images):
 
 
 def sd_val_success(images, labels):
-    kappa = 0.8
+    kappa = 0.99
     p = 50
     _images = np.reshape(images, newshape=(-1, 784))
     n = len(images)
@@ -108,9 +108,9 @@ def sd_val_success(images, labels):
             if sd > sd_9[i]:
                 sd_9[i] = sd
 
-    indices_refined_7 = indices_7[sd_7.argsort()[:n_7_refined]]
-    indices_refined_8 = indices_8[sd_8.argsort()[:n_8_refined]]
-    indices_refined_9 = indices_9[sd_9.argsort()[:n_9_refined]]
+    indices_refined_7 = np.array(indices_7)[sd_7.argsort()[:n_7_refined]]
+    indices_refined_8 = np.array(indices_8)[sd_8.argsort()[:n_8_refined]]
+    indices_refined_9 = np.array(indices_9)[sd_9.argsort()[:n_9_refined]]
 
     validation_success = []
     for i in range(n):
@@ -129,7 +129,7 @@ valid_9_ind = []
 
 
 def cramer_test(images, labels, valid_set, valid_indices):
-    crit_val = 10.
+    crit_val = 35.
     global part_stat_7, part_stat_8, part_stat_9, valid_7_ind, valid_8_ind, valid_9_ind
     if part_stat_7 == 0:
         for i in range(len(valid_indices)):
