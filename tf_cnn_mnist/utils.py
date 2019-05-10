@@ -328,6 +328,12 @@ def visualize(sess, dcgan, config, option):
 
         errs = []
         false_neg = []
+        errs_cramer = []
+        false_neg_cramer = []
+        false_pos_cramer = []
+        errs_sd = []
+        false_neg_sd = []
+        false_pos_sd = []
 
         # false positive rate calculation
         false_pos = 0
@@ -400,6 +406,10 @@ def visualize(sess, dcgan, config, option):
             train_labels = []
 
             false_neg.append(0)
+            false_neg_cramer.append(0)
+            false_pos_cramer.append(0)
+            false_neg_sd.append(0)
+            false_pos_sd.append(0)
 
             # validation
             for j in range(n_t // config.batch_size + 1):
@@ -426,8 +436,32 @@ def visualize(sess, dcgan, config, option):
 
                         if validation_success and was_generated:
                             false_neg[trial] += 1
+            # validation for SD and Cramer
+            val_cramer = cl.cramer_test(train_data_tmp, train_labels_tmp, dcgan.data_X[:1000], dcgan.data_y[:1000])
+            val_sd = cl.sd_val_success(train_data_tmp, train_labels_tmp)
+            train_data_cramer = []
+            train_labels_cramer = []
+            train_data_sd = []
+            train_labels_sd = []
+            for i in range(n_t):
+                if val_cramer[i]:
+                    train_data_cramer.append(train_data_tmp[i])
+                    train_labels_cramer.append(train_labels_tmp[i])
+                    if i > n_orig:
+                        false_pos_cramer[trial] += 1
+                elif i <= n_orig:
+                    false_pos_cramer[trial] += 1
+
+                if val_sd[i]:
+                    train_data_sd.append(train_data_tmp[i])
+                    train_labels_sd.append(train_labels_tmp[i])
+                    if i > n_orig:
+                        false_pos_sd[trial] += 1
+                elif i <= n_orig:
+                    false_pos_sd[trial] += 1
+
             # calculate classification error
-            for i in range(1000):
+            for i in range(500):
                 _ = sess.run(c_optim, feed_dict={
                     x_c_placeholder: train_data,
                     y_c_placeholder: train_labels
@@ -439,12 +473,54 @@ def visualize(sess, dcgan, config, option):
             err = 1-accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
             errs.append(err)
 
+            # calculate classification error: Cramer
+            for i in range(200):
+                _ = sess.run(c_optim, feed_dict={
+                    x_c_placeholder: train_data_cramer,
+                    y_c_placeholder: train_labels_cramer
+                })
+            predicted_labels = sess.run(c_train, feed_dict={
+                x_c_placeholder: dcgan.test_data
+            })
+
+            err = 1 - accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
+            errs_cramer.append(err)
+
+            # calculate classification error: SD
+            for i in range(200):
+                _ = sess.run(c_optim, feed_dict={
+                    x_c_placeholder: train_data_sd,
+                    y_c_placeholder: train_labels_sd
+                })
+            predicted_labels = sess.run(c_train, feed_dict={
+                x_c_placeholder: dcgan.test_data
+            })
+
+            err = 1 - accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
+            errs_sd.append(err)
+
         print('error=', np.mean(errs) * 100, '+-', (np.std(errs) * 1.96 / np.sqrt(n_trials)) * 100)
 
         if not skip_validation:
             print('false negative=', (np.mean(false_neg) / (n_t * gen_share)) * 100,
                 '+-', (np.std(false_neg) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
             print('false positive=', false_pos / n_orig * 100)
+        print('Cramer:')
+        print('Cramer error=', np.mean(errs_cramer) * 100, '+-', (np.std(errs_cramer) * 1.96 / np.sqrt(n_trials)) * 100)
+
+        if not skip_validation:
+            print('Cramer false negative=', (np.mean(false_neg_cramer) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_cramer) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+            print('Cramer false positive=', (np.mean(false_pos_cramer) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_pos_cramer) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+        print('SD:')
+        print('SD error=', np.mean(errs_sd) * 100, '+-', (np.std(errs_sd) * 1.96 / np.sqrt(n_trials)) * 100)
+
+        if not skip_validation:
+            print('SD false negative=', (np.mean(false_neg_sd) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_sd) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+            print('SD false positive=', (np.mean(false_pos_sd) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_pos_sd) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
 
 
 def image_manifold_size(num_images):

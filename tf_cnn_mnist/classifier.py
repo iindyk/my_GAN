@@ -129,6 +129,8 @@ valid_9_ind = []
 
 
 def cramer_test(images, labels, valid_set, valid_indices):
+    crit_val = 10.
+    global part_stat_7, part_stat_8, part_stat_9, valid_7_ind, valid_8_ind, valid_9_ind
     if part_stat_7 == 0:
         for i in range(len(valid_indices)):
             if valid_indices[i, 0] == 1:
@@ -141,34 +143,37 @@ def cramer_test(images, labels, valid_set, valid_indices):
             for j in valid_7_ind:
                 part_stat_7 += np.linalg.norm(valid_set[i] - valid_set[j])
         part_stat_7 /= 2 * (len(valid_7_ind) ** 2)
+        for i in valid_8_ind:
+            for j in valid_8_ind:
+                part_stat_8 += np.linalg.norm(valid_set[i] - valid_set[j])
+        part_stat_8 /= 2 * (len(valid_8_ind) ** 2)
+        for i in valid_9_ind:
+            for j in valid_9_ind:
+                part_stat_9 += np.linalg.norm(valid_set[i] - valid_set[j])
+        part_stat_9 /= 2 * (len(valid_9_ind) ** 2)
 
-    test_stat_h = self.part_test_stat_h
-    test_stat_v = self.part_test_stat_v
-    train_h_indeces = np.where(train_labels == 1)[0]
-    train_v_indeces = np.where(train_labels == -1)[0]
-    valid_h_indeces = np.where(self.valid_labels == 1)[0]
-    valid_v_indeces = np.where(self.valid_labels == -1)[0]
+    validation_succes = []
+    for k in range(len(labels)):
+        if labels[k, 0] == 1:
+            # 7
+            test_stat_7 = part_stat_7
+            for j in valid_7_ind:
+                test_stat_7 += np.linalg.norm(images[k] - valid_set[j]) / (len(valid_7_ind))
+            test_stat_7 *= len(valid_7_ind) / (1 + len(valid_7_ind))
+            validation_succes.append(test_stat_7 < crit_val)
+        elif labels[k, 1] == 1:
+            # 8
+            test_stat_8 = part_stat_8
+            for j in valid_8_ind:
+                test_stat_8 += np.linalg.norm(images[k] - valid_set[j]) / (len(valid_8_ind))
+            test_stat_8 *= len(valid_8_ind) / (1 + len(valid_8_ind))
+            validation_succes.append(test_stat_8 < crit_val)
+        else:
+            # 9
+            test_stat_9 = part_stat_9
+            for j in valid_9_ind:
+                test_stat_9 += np.linalg.norm(images[k] - valid_set[j]) / (len(valid_9_ind))
+            test_stat_9 *= len(valid_9_ind) / (1 + len(valid_9_ind))
+            validation_succes.append(test_stat_9 < crit_val)
 
-    # harmless points
-    for i in train_h_indeces:
-        for j in valid_h_indeces:
-            test_stat_h += np.linalg.norm(train_dataset[i, :] - self.valid_dataset[j, :]) / (
-                    len(train_h_indeces) * len(valid_h_indeces))
-    for i in train_h_indeces:
-        for j in train_h_indeces:
-            test_stat_h += np.linalg.norm(train_dataset[i, :] - train_dataset[j, :]) / (
-                    2 * len(valid_h_indeces) ** 2)
-    test_stat_h *= len(train_h_indeces) * len(valid_h_indeces) / (len(train_h_indeces) + len(valid_h_indeces))
-
-    # virus points
-    for i in train_v_indeces:
-        for j in valid_v_indeces:
-            test_stat_v += np.linalg.norm(train_dataset[i, :] - self.valid_dataset[j, :]) / (
-                    len(train_v_indeces) * len(valid_v_indeces))
-    for i in train_v_indeces:
-        for j in train_v_indeces:
-            test_stat_v += np.linalg.norm(train_dataset[i, :] - train_dataset[j, :]) / (
-                    2 * len(valid_v_indeces) ** 2)
-    test_stat_v *= len(train_v_indeces) * len(valid_v_indeces) / (len(train_v_indeces) + len(valid_v_indeces))
-
-    return test_stat_h + test_stat_v
+    return validation_succes
