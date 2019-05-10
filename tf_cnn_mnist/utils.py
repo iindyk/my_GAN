@@ -315,7 +315,7 @@ def visualize(sess, dcgan, config, option):
                                 './samples/test/test_%s-%s_%s.png' % (y[i]+7, idx, num))
 
     elif option == 7:
-        n_trials = 10
+        n_trials = 100
         n_t = 100
         sample_from_orig = False  # sample generated data from original
         data_shift = 800

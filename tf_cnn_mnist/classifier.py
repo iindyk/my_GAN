@@ -129,7 +129,7 @@ valid_9_ind = []
 
 
 def cramer_test(images, labels, valid_set, valid_indices):
-    crit_val = 35.
+    crit_val = 33.
     global part_stat_7, part_stat_8, part_stat_9, valid_7_ind, valid_8_ind, valid_9_ind
     if part_stat_7 == 0:
         for i in range(len(valid_indices)):

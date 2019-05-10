@@ -186,7 +186,7 @@ class DCGAN(object):
         #dc_dxi = tf.stop_gradient(tf.cond(tf.abs(tf.linalg.det(self.dl_dc_dc)) > 1e-10,
         #                                  lambda: tf.linalg.solve(self.dl_dc_dc, self.dl_dc_dxi),
         #                                  lambda: tf.matmul(tf.ones((self._n3, self._n3)), self.dl_dc_dxi)))
-        self.cust_adv_grad = -tf.stop_gradient(tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)))
+        self.cust_adv_grad = tf.stop_gradient(tf.math.l2_normalize(tf.matmul(tf.expand_dims(self.dlt_dc, 0), dc_dxi)))
 
 
         self.saver = tf.train.Saver()
