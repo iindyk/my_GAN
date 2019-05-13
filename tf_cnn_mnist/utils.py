@@ -319,12 +319,13 @@ def visualize(sess, dcgan, config, option):
         n_t = 100
         sample_from_orig = False  # sample generated data from original
         data_shift = 800
-        validation_crit_val = 1.
+        validation_crit_val = -2.
         skip_validation = False
         gen_share = 0.4  # % of training set to be generated
         n_orig = int(n_t * (1 - gen_share))
 
         dcgan.data_X, dcgan.data_y, dcgan.test_data, dcgan.test_labels = dcgan.load_mnist()
+        print(len(dcgan.test_labels))
 
         errs = []
         false_neg = []

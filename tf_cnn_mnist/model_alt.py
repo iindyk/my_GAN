@@ -309,17 +309,17 @@ class DCGAN(object):
                         self.writer.add_summary(summary_str, counter)
 
                     # Update G network twice: experimental, not in the paper
-                    #_, summary_str = self.sess.run([g_optim, self.g_sum],
-                    #                               feed_dict={
-                    #                                      self.z: batch_z,
-                    #                                      self.y: batch_labels,
-                    #                                  }, options=self.run_opts)
-                    #self.writer.add_summary(summary_str, counter)
-                    #_, summary_str = self.sess.run([g_optim, self.g_sum],
-                    #                               feed_dict={
-                    #                                   self.z: batch_z,
-                    #                                   self.y: batch_labels,
-                    #                               }, options=self.run_opts)
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                                   feed_dict={
+                                                          self.z: batch_z,
+                                                          self.y: batch_labels,
+                                                      }, options=self.run_opts)
+                    self.writer.add_summary(summary_str, counter)
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                                   feed_dict={
+                                                       self.z: batch_z,
+                                                       self.y: batch_labels,
+                                                   }, options=self.run_opts)
                     self.writer.add_summary(summary_str, counter)
 
                     errD_fake = self.d_loss_fake.eval({
