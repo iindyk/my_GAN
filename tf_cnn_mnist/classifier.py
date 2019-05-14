@@ -6,7 +6,7 @@ import numpy as np
 def c(images):
 
     # Network Parameters
-    n_hidden_1 = 8 # 1st layer number of neurons
+    n_hidden_1 = 256 # 1st layer number of neurons
     n_hidden_2 = 8 # 2nd layer number of neurons
     n_input = 784 # MNIST data input (img shape: 28*28)
     n_classes = 3 # MNIST total classes (0-9 digits)
@@ -47,7 +47,9 @@ def sd_val_success(images, labels):
         # take direction between 2 random points in the training set
         indices = np.random.randint(low=0, high=n, size=2)
         new_dir = _images[indices[0]] - _images[indices[1]]
-        new_dir /= np.linalg.norm(new_dir)
+        norm_ = np.linalg.norm(new_dir)
+        if norm_ > 1e-5:
+            new_dir /= norm_
         directions.append(new_dir)
 
     directions = np.array(directions)
@@ -129,7 +131,7 @@ valid_9_ind = []
 
 
 def cramer_test(images, labels, valid_set, valid_indices):
-    crit_val = 33.
+    crit_val = 28
     global part_stat_7, part_stat_8, part_stat_9, valid_7_ind, valid_8_ind, valid_9_ind
     if part_stat_7 == 0:
         for i in range(len(valid_indices)):
