@@ -6,8 +6,8 @@ import numpy as np
 def c(images):
 
     # Network Parameters
-    n_hidden_1 = 256 # 1st layer number of neurons
-    n_hidden_2 = 256 # 2nd layer number of neurons
+    n_hidden_1 = 8 # 1st layer number of neurons
+    n_hidden_2 = 8 # 2nd layer number of neurons
     n_input = 784 # MNIST data input (img shape: 28*28)
     n_classes = 3 # MNIST total classes (0-9 digits)
 
