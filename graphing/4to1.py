@@ -1,6 +1,6 @@
 from PIL import Image
 
-alpha = '10.'
+alpha = '1.'
 label = '7'
 im_dir = '/home/iindyk/PycharmProjects/my_GAN/images/for_graphs/7vs8vs9/'+alpha+'/'
 
