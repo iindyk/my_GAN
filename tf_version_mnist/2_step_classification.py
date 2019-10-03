@@ -84,6 +84,9 @@ with tf.Session() as sess:
     errs_sd = []
     false_neg_sd = []
     false_pos_sd = []
+    errs_roni = []
+    false_neg_roni = []
+    false_pos_roni = []
 
     # false positive rate calculation
     false_pos = 0
@@ -142,6 +145,8 @@ with tf.Session() as sess:
         false_pos_cramer.append(0)
         false_neg_sd.append(0)
         false_pos_sd.append(0)
+        false_neg_roni.append(0)
+        false_pos_roni.append(0)
 
         # validation
         for j in range(n_t//batch_size+1):
@@ -167,13 +172,17 @@ with tf.Session() as sess:
                     if validation_success and was_generated:
                         false_neg[trial] += 1
 
-        # validation for SD and Cramer
+        # validation for SD, Cramer and RONI
         val_cramer = cl.cramer_test(train_data_tmp, train_labels_tmp, np.reshape(x_train[:1000], (-1, 784)), y_train[:1000])
         val_sd = cl.sd_val_success(train_data_tmp, train_labels_tmp)
+        val_roni = cl.roni_val_svm(train_data_tmp, train_labels_tmp, train_data[:100], train_labels[:100],
+                                    train_data_tmp[:n_orig], train_labels_tmp[:n_orig])
         train_data_cramer = []
         train_labels_cramer = []
         train_data_sd = []
         train_labels_sd = []
+        train_data_roni = []
+        train_labels_roni = []
         for i in range(n_t):
             if val_cramer[i]:
                 train_data_cramer.append(train_data_tmp[i])
@@ -191,11 +200,22 @@ with tf.Session() as sess:
             elif i < n_orig:
                 false_pos_sd[trial] += 1
 
+            if val_roni[i]:
+                train_data_roni.append(train_data_tmp[i])
+                train_labels_roni.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                if i > n_orig:
+                    false_neg_roni[trial] += 1
+            elif i < n_orig:
+                false_pos_roni[trial] += 1
+
         svc_sd = svm.LinearSVC(loss='hinge').fit(train_data_sd, train_labels_sd)
         errs_sd.append(1-svc_sd.score(x_test, y_test))
 
         svc_cramer = svm.LinearSVC(loss='hinge').fit(train_data_cramer, train_labels_cramer)
         errs_cramer.append(1-svc_cramer.score(x_test, y_test))
+
+        svc_roni = svm.LinearSVC(loss='hinge').fit(train_data_roni, train_labels_roni)
+        errs_roni.append(1 - svc_roni.score(x_test, y_test))
 
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
@@ -224,4 +244,13 @@ if not skip_validation:
                   '+-', (np.std(false_neg_sd) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
     print('SD false positive=', (np.mean(false_pos_sd) / n_orig) * 100,
                   '+-', (np.std(false_pos_sd) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
+
+print('RONI:')
+print('RONI error=', np.mean(errs_roni) * 100, '+-', (np.std(errs_roni) * 1.96 / np.sqrt(n_trials)) * 100)
+
+if not skip_validation:
+    print('SD false negative=', (np.mean(false_neg_roni) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_roni) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+    print('SD false positive=', (np.mean(false_pos_roni) / n_orig) * 100,
+                  '+-', (np.std(false_pos_roni) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
 
