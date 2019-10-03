@@ -316,11 +316,11 @@ def visualize(sess, dcgan, config, option):
 
     elif option == 7:
         n_trials = 10
-        n_t = 100
+        n_t = 1000
         sample_from_orig = False  # sample generated data from original
         data_shift = 800
-        validation_crit_val = -0.5
-        skip_validation = False
+        validation_crit_val = 0. #-.8
+        skip_validation = True
         gen_share = 0.4  # % of training set to be generated
         n_orig = int(n_t * (1 - gen_share))
 
@@ -337,10 +337,15 @@ def visualize(sess, dcgan, config, option):
 
         # false positive rate calculation
         false_pos = 0
-        _dt_tmp = np.reshape(np.append(np.reshape(dcgan.data_X[data_shift:n_orig + data_shift], newshape=(-1, 784)),
-                            np.zeros((3*config.batch_size - n_orig, 784)), axis=0), newshape=(-1, 28, 28, 1))
-        _lb_tmp = np.append(dcgan.data_y[data_shift:n_orig + data_shift],
-                            [[0., 0., 1.]]*(3*config.batch_size - n_orig), axis=0)
+        n_leftover = int(np.ceil(n_orig/config.batch_size)*config.batch_size - n_orig)
+        if n_leftover != 0:
+            _dt_tmp = np.reshape(np.append(np.reshape(dcgan.data_X[data_shift:n_orig + data_shift], newshape=(-1, 784)),
+                                 np.zeros((n_leftover, 784)), axis=0), newshape=(-1, 28, 28, 1))
+            _lb_tmp = np.append(dcgan.data_y[data_shift:n_orig + data_shift],
+                                [[0., 0., 1.]]*n_leftover, axis=0)
+        else:
+            _dt_tmp = np.reshape(dcgan.data_X[data_shift:n_orig + data_shift], newshape=(-1, 28, 28, 1))
+            _lb_tmp = dcgan.data_y[data_shift:n_orig + data_shift]
         x_placeholder = tf.placeholder("float", shape=[config.batch_size, 28, 28, 1])
         y_placeholder = tf.placeholder("float", shape=[config.batch_size, 3])
 
@@ -360,16 +365,13 @@ def visualize(sess, dcgan, config, option):
 
         d_x = dcgan.discriminator(x_placeholder, y=y_placeholder, reuse=True)
 
-        _, val1 = sess.run(d_x, feed_dict={
-            x_placeholder: _dt_tmp[:config.batch_size],
-            y_placeholder: _lb_tmp[:config.batch_size]})
-        _, val2 = sess.run(d_x, feed_dict={
-            x_placeholder: _dt_tmp[config.batch_size:2*config.batch_size],
-            y_placeholder: _lb_tmp[config.batch_size:2*config.batch_size]})
-        _, val3 = sess.run(d_x, feed_dict={
-            x_placeholder: _dt_tmp[2*config.batch_size:3*config.batch_size],
-            y_placeholder: _lb_tmp[2*config.batch_size:3*config.batch_size]})
-        val = np.append(np.append(val1, val2, axis=0), val3, axis=0)
+        n_runs = int(np.ceil(n_orig/config.batch_size))
+        val = np.empty((0, 1))
+        for k in range(n_runs):
+            _, val_new = sess.run(d_x, feed_dict={
+                x_placeholder: _dt_tmp[config.batch_size*k:config.batch_size*(k+1)],
+                y_placeholder: _lb_tmp[config.batch_size*k:config.batch_size*(k+1)]})
+            val = np.append(val, val_new, axis=0)
 
         for k in range(n_orig):
             if val[k, 0] < validation_crit_val:
@@ -465,7 +467,7 @@ def visualize(sess, dcgan, config, option):
                 sess.run(c_var.initializer)
             for opt_var in optimizer.variables():
                 sess.run(opt_var.initializer)
-            for i in range(500):
+            for i in range(1000):
                 _ = sess.run(c_optim, feed_dict={
                     x_c_placeholder: train_data,
                     y_c_placeholder: train_labels
@@ -482,7 +484,7 @@ def visualize(sess, dcgan, config, option):
                 sess.run(c_var.initializer)
             for opt_var in optimizer.variables():
                 sess.run(opt_var.initializer)
-            for i in range(500):
+            for i in range(1000):
                 _ = sess.run(c_optim, feed_dict={
                     x_c_placeholder: train_data_cramer,
                     y_c_placeholder: train_labels_cramer
@@ -499,7 +501,7 @@ def visualize(sess, dcgan, config, option):
                 sess.run(c_var.initializer)
             for opt_var in optimizer.variables():
                 sess.run(opt_var.initializer)
-            for i in range(500):
+            for i in range(1000):
                 _ = sess.run(c_optim, feed_dict={
                     x_c_placeholder: train_data_sd,
                     y_c_placeholder: train_labels_sd

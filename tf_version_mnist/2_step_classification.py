@@ -2,9 +2,10 @@ from tf_version_mnist.discriminator import *
 from tf_version_mnist.generator import *
 import tensorflow as tf
 import sklearn.svm as svm
+import tf_cnn_mnist.classifier as cl
 
 
-n_trials = 1             # number of trials
+n_trials = 1000             # number of trials
 n_t = 100                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
@@ -14,10 +15,10 @@ im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
 sample_from_orig = False    # sample generated data from original
 data_shift = 0
-validation_crit_val = 3.1
+validation_crit_val = 4.
 skip_validation = False
-labels_to_use = [0, 1]
-model_to_load = '01-15_18:47_10.0'
+labels_to_use = [5, 6]
+model_to_load = '01-16_19:25_0.5'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
@@ -77,6 +78,12 @@ with tf.Session() as sess:
 
     errs = []
     false_neg = []
+    errs_cramer = []
+    false_neg_cramer = []
+    false_pos_cramer = []
+    errs_sd = []
+    false_neg_sd = []
+    false_pos_sd = []
 
     # false positive rate calculation
     false_pos = 0
@@ -119,6 +126,10 @@ with tf.Session() as sess:
         train_labels = []
 
         false_neg.append(0)
+        false_neg_cramer.append(0)
+        false_pos_cramer.append(0)
+        false_neg_sd.append(0)
+        false_pos_sd.append(0)
 
         # validation
         for j in range(n_t//batch_size+1):
@@ -144,6 +155,36 @@ with tf.Session() as sess:
                     if validation_success and was_generated:
                         false_neg[trial] += 1
 
+        # validation for SD and Cramer
+        val_cramer = cl.cramer_test(train_data_tmp, train_labels_tmp, np.reshape(x_train[:1000], (-1, 784)), y_train[:1000])
+        val_sd = cl.sd_val_success(train_data_tmp, train_labels_tmp)
+        train_data_cramer = []
+        train_labels_cramer = []
+        train_data_sd = []
+        train_labels_sd = []
+        for i in range(n_t):
+            if val_cramer[i]:
+                train_data_cramer.append(train_data_tmp[i])
+                train_labels_cramer.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                if i > n_orig:
+                    false_neg_cramer[trial] += 1
+            elif i < n_orig:
+                false_pos_cramer[trial] += 1
+
+            if val_sd[i]:
+                train_data_sd.append(train_data_tmp[i])
+                train_labels_sd.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                if i > n_orig:
+                    false_neg_sd[trial] += 1
+            elif i < n_orig:
+                false_pos_sd[trial] += 1
+
+        svc_sd = svm.LinearSVC(loss='hinge').fit(train_data_sd, train_labels_sd)
+        errs_sd.append(1-svc_sd.score(x_test, y_test))
+
+        svc_cramer = svm.LinearSVC(loss='hinge').fit(train_data_cramer, train_labels_cramer)
+        errs_cramer.append(1-svc_cramer.score(x_test, y_test))
+
         svc = svm.LinearSVC(loss='hinge').fit(train_data, train_labels)
         errs.append(1 - svc.score(x_test, y_test))
 
@@ -154,4 +195,21 @@ if not skip_validation:
     print('false negative=', (np.mean(false_neg)/(n_t*gen_share))*100,
           '+-', (np.std(false_neg)*100/(n_t*gen_share))*1.96/np.sqrt(n_trials))
     print('false positive=', false_pos / n_orig * 100)
+
+print('Cramer:')
+print('Cramer error=', np.mean(errs_cramer) * 100, '+-', (np.std(errs_cramer) * 1.96 / np.sqrt(n_trials)) * 100)
+
+if not skip_validation:
+    print('Cramer false negative=', (np.mean(false_neg_cramer) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_cramer) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+    print('Cramer false positive=', (np.mean(false_pos_cramer) / n_orig) * 100,
+                  '+-', (np.std(false_pos_cramer) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
+print('SD:')
+print('SD error=', np.mean(errs_sd) * 100, '+-', (np.std(errs_sd) * 1.96 / np.sqrt(n_trials)) * 100)
+
+if not skip_validation:
+    print('SD false negative=', (np.mean(false_neg_sd) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_sd) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+    print('SD false positive=', (np.mean(false_pos_sd) / n_orig) * 100,
+                  '+-', (np.std(false_pos_sd) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
 

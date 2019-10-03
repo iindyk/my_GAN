@@ -77,6 +77,8 @@ class DCGAN(object):
 
         if self.dataset_name == 'mnist':
             self.data_X, self.data_y, self.test_data, self.test_labels = self.load_mnist()
+            self.data_X, self.data_y, self.test_data, self.test_labels = \
+                self.data_X[:100], self.data_y[:100], self.test_data[:100], self.test_labels[:100]
             self.c_dim = self.data_X[0].shape[-1]
         else:
             self.data = glob(os.path.join("./data", self.dataset_name, self.input_fname_pattern))
@@ -309,11 +311,11 @@ class DCGAN(object):
                         self.writer.add_summary(summary_str, counter)
 
                     # Update G network twice: experimental, not in the paper
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={
-                                                          self.z: batch_z,
-                                                          self.y: batch_labels,
-                                                      }, options=self.run_opts)
+                    #_, summary_str = self.sess.run([g_optim, self.g_sum],
+                    #                               feed_dict={
+                    #                                      self.z: batch_z,
+                    #                                      self.y: batch_labels,
+                    #                                  }, options=self.run_opts)
                     #self.writer.add_summary(summary_str, counter)
                     #_, summary_str = self.sess.run([g_optim, self.g_sum],
                     #                               feed_dict={
