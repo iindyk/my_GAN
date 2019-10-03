@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # setting max heap size limit
     rsrc = resource.RLIMIT_DATA
     _, hard = resource.getrlimit(rsrc)
-    resource.setrlimit(rsrc, ((1024 ** 3) * 12, hard))
+    resource.setrlimit(rsrc, ((1024 ** 3) * 10, hard))
     soft, hard = resource.getrlimit(rsrc)
     print('Soft RAM limit set to:', soft / (1024 ** 3), 'GB')
     tf.app.run()

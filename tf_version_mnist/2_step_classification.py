@@ -87,14 +87,26 @@ with tf.Session() as sess:
 
     # false positive rate calculation
     false_pos = 0
-    _dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
-                        np.zeros((batch_size - n_orig, 784)), axis=0)
-    _lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
-    val = sess.run(d_x, feed_dict={
-        x_placeholder: np.reshape(_dt_tmp, newshape=[batch_size, im_dim, im_dim, channel]),
-        y_placeholder: _lb_tmp})
-    for k in range(batch_size):
-        if val[k, 0] <= validation_crit_val and k < n_orig:
+    n_leftover = int(np.ceil(n_orig / batch_size) * batch_size - n_orig)
+    if n_leftover != 0:
+        _dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
+                            np.zeros((batch_size - n_orig, 784)), axis=0)
+        _lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
+    else:
+        _dt_tmp = np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784))
+        _lb_tmp = y_train[data_shift:n_orig + data_shift]
+
+    n_runs = int(np.ceil(n_orig / batch_size))
+    val = np.empty((0, 1))
+    for k in range(n_runs):
+        _, val_new = sess.run(d_x, feed_dict={
+            x_placeholder: np.reshape(_dt_tmp[batch_size * k:batch_size * (k + 1)],
+                                      newshape=[batch_size, im_dim, im_dim, channel]),
+            y_placeholder: _lb_tmp[batch_size * k:batch_size * (k + 1)]})
+        val = np.append(val, val_new, axis=0)
+
+    for k in range(n_orig):
+        if val[k, 0] <= validation_crit_val:
             false_pos += 1
 
     for trial in range(n_trials):

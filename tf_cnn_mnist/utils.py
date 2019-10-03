@@ -316,11 +316,11 @@ def visualize(sess, dcgan, config, option):
 
     elif option == 7:
         n_trials = 10
-        n_t = 1000
+        n_t = 800
         sample_from_orig = False  # sample generated data from original
-        data_shift = 800
+        data_shift = 1500
         validation_crit_val = 0. #-.8
-        skip_validation = True
+        skip_validation = False
         gen_share = 0.4  # % of training set to be generated
         n_orig = int(n_t * (1 - gen_share))
 
@@ -334,6 +334,9 @@ def visualize(sess, dcgan, config, option):
         errs_sd = []
         false_neg_sd = []
         false_pos_sd = []
+        errs_roni = []
+        false_neg_roni = []
+        false_pos_roni = []
 
         # false positive rate calculation
         false_pos = 0
@@ -412,6 +415,8 @@ def visualize(sess, dcgan, config, option):
             false_pos_cramer.append(0)
             false_neg_sd.append(0)
             false_pos_sd.append(0)
+            false_neg_roni.append(0)
+            false_pos_roni.append(0)
 
             # validation
             for j in range(n_t // config.batch_size + 1):
@@ -438,13 +443,18 @@ def visualize(sess, dcgan, config, option):
 
                         if validation_success and was_generated:
                             false_neg[trial] += 1
-            # validation for SD and Cramer
+            # validation for SD, Cramer and RONI
             val_cramer = cl.cramer_test(train_data_tmp, train_labels_tmp, dcgan.data_X[:1000], dcgan.data_y[:1000])
             val_sd = cl.sd_val_success(train_data_tmp, train_labels_tmp)
+            args = (x_c_placeholder, y_c_placeholder, c_train)
+            val_roni = cl.roni_val_c(sess, args, train_data_tmp, train_labels_tmp, dcgan.data_X[:100], dcgan.data_y[:100],
+                                     train_data_tmp[:n_orig], train_labels_tmp[:n_orig])
             train_data_cramer = []
             train_labels_cramer = []
             train_data_sd = []
             train_labels_sd = []
+            train_data_roni = []
+            train_labels_roni = []
             for i in range(n_t):
                 if val_cramer[i]:
                     train_data_cramer.append(train_data_tmp[i])
@@ -461,6 +471,14 @@ def visualize(sess, dcgan, config, option):
                         false_neg_sd[trial] += 1
                 elif i < n_orig:
                     false_pos_sd[trial] += 1
+
+                if val_roni[i]:
+                    train_data_roni.append(train_data_tmp[i])
+                    train_labels_roni.append(train_labels_tmp[i])
+                    if i > n_orig:
+                        false_neg_roni[trial] += 1
+                elif i < n_orig:
+                    false_pos_roni[trial] += 1
 
             # calculate classification error
             for c_var in c_vars:
@@ -513,6 +531,23 @@ def visualize(sess, dcgan, config, option):
             err = 1 - accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
             errs_sd.append(err)
 
+            # calculate classification error: RONI
+            for c_var in c_vars:
+                sess.run(c_var.initializer)
+            for opt_var in optimizer.variables():
+                sess.run(opt_var.initializer)
+            for i in range(1000):
+                _ = sess.run(c_optim, feed_dict={
+                    x_c_placeholder: train_data_roni,
+                    y_c_placeholder: train_labels_roni
+                })
+            predicted_labels = sess.run(c_train, feed_dict={
+                x_c_placeholder: dcgan.test_data
+            })
+
+            err = 1 - accuracy_score(np.argmax(dcgan.test_labels, axis=1), np.argmax(predicted_labels, axis=1))
+            errs_roni.append(err)
+
         print('error=', np.mean(errs) * 100, '+-', (np.std(errs) * 1.96 / np.sqrt(n_trials)) * 100)
 
         if not skip_validation:
@@ -535,6 +570,15 @@ def visualize(sess, dcgan, config, option):
                   '+-', (np.std(false_neg_sd) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
             print('SD false positive=', (np.mean(false_pos_sd) / n_orig) * 100,
                   '+-', (np.std(false_pos_sd) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
+
+        print('RONI:')
+        print('RONI error=', np.mean(errs_roni) * 100, '+-', (np.std(errs_roni) * 1.96 / np.sqrt(n_trials)) * 100)
+
+        if not skip_validation:
+            print('RONI false negative=', (np.mean(false_neg_roni) / (n_t * gen_share)) * 100,
+                  '+-', (np.std(false_neg_roni) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
+            print('RONI false positive=', (np.mean(false_pos_roni) / n_orig) * 100,
+                  '+-', (np.std(false_pos_roni) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
 
 
 def image_manifold_size(num_images):

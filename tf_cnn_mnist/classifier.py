@@ -1,6 +1,8 @@
 import tensorflow as tf
 from statsmodels import robust
+from sklearn.metrics import accuracy_score
 import numpy as np
+import sklearn.svm as svm
 
 
 def c(images):
@@ -180,3 +182,68 @@ def cramer_test(images, labels, valid_set, valid_indices):
             validation_succes.append(test_stat_9 < crit_val)
 
     return validation_succes
+
+
+def roni_val_c(sess, args, images, labels, valid_set, valid_labels, train_set, train_labels):
+    # fit train set
+    x_c_placeholder, y_c_placeholder, c_train = args
+    c_loss_train = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=c_train, labels=y_c_placeholder))
+    t_vars = tf.trainable_variables()
+    c_vars = [var for var in t_vars if 'cl_' in var.name]
+    optimizer = tf.train.AdamOptimizer(0.001)
+    c_optim = optimizer.minimize(c_loss_train, var_list=c_vars)
+    for c_var in c_vars:
+        sess.run(c_var.initializer)
+    for opt_var in optimizer.variables():
+        sess.run(opt_var.initializer)
+
+    for i in range(1000):
+        _ = sess.run(c_optim, feed_dict={
+            x_c_placeholder: train_set,
+            y_c_placeholder: train_labels
+        })
+    predicted_labels = sess.run(c_train, feed_dict={
+        x_c_placeholder: valid_set
+    })
+    err = 1 - accuracy_score(np.argmax(valid_labels, axis=1), np.argmax(predicted_labels, axis=1))
+    new_train_set = np.array(train_set)
+    new_train_labels = np.array(train_labels)
+    valid_success = []
+    for new_image, new_label in zip(images, labels):
+        _new_train_set = np.append(new_train_set, np.reshape(new_image, newshape=[1, 28, 28, 1]), axis=0)
+        _new_train_labels = np.append(new_train_labels, np.reshape(new_label, newshape=[1, 3]), axis=0)
+        for i in range(10):
+            _ = sess.run(c_optim, feed_dict={
+                x_c_placeholder: new_train_set,
+                y_c_placeholder: new_train_labels
+            })
+        predicted_labels = sess.run(c_train, feed_dict={
+            x_c_placeholder: valid_set
+        })
+        new_err = 1 - accuracy_score(np.argmax(valid_labels, axis=1), np.argmax(predicted_labels, axis=1))
+        valid_success.append(new_err <= err)
+        if new_err <= err:
+            new_train_set = _new_train_set
+            new_train_labels = _new_train_labels
+        err = new_err
+    return valid_success
+
+
+def roni_val_svm(images, labels, valid_set, valid_labels, train_set, train_labels):
+    # fit svm
+    svc = svm.LinearSVC(loss='hinge').fit(train_set, train_labels)
+    err = 1 - svc.score(valid_set, valid_labels)
+    new_train_set = np.array(train_set)
+    new_train_labels = np.array(train_labels)
+    valid_success = []
+    for new_image, new_label in zip(images, labels):
+        _new_train_set = np.append(new_train_set, np.reshape(new_image, newshape=[1, 28, 28, 1]), axis=0)
+        _new_train_labels = np.append(new_train_labels, np.reshape(new_label, newshape=[1, 3]), axis=0)
+        svc.fit(_new_train_set, _new_train_labels)
+        new_err = 1 - svc.score(valid_set, valid_labels)
+        valid_success.append(new_err <= err)
+        if new_err <= err:
+            new_train_set = _new_train_set
+            new_train_labels = _new_train_labels
+        err = new_err
+    return valid_success
