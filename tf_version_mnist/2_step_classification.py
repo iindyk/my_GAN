@@ -5,8 +5,8 @@ import sklearn.svm as svm
 import tf_cnn_mnist.classifier as cl
 
 
-n_trials = 1000             # number of trials
-n_t = 100                   # total number of training points
+n_trials = 10             # number of trials
+n_t = 900                   # total number of training points
 z_dim = 100                 # generator input dimension
 batch_size = 64             # size of input batch
 y_dim = 2                   # number of classes
@@ -15,10 +15,10 @@ im_dim = 28                 # dimension of 1 side of image
 gen_share = 0.4             # % of training set to be generated
 sample_from_orig = False    # sample generated data from original
 data_shift = 0
-validation_crit_val = 4.
+validation_crit_val = 0.
 skip_validation = False
 labels_to_use = [5, 6]
-model_to_load = '01-16_19:25_0.5'
+model_to_load = '01-17_16:09_0.75'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
@@ -45,10 +45,10 @@ y_test = []
 for i in range(len(y_test_all)):
     if y_test_all[i] == labels_to_use[0]:
         x_test.append(x_test_all[i])
-        y_test.append(1)
+        y_test.append(0)
     elif y_test_all[i] == labels_to_use[1]:
         x_test.append(x_test_all[i])
-        y_test.append(-1)
+        y_test.append(1)
 
 x_train = np.array(x_train, dtype=np.float32)
 y_train = np.array(y_train, dtype=np.float32)
@@ -93,8 +93,8 @@ with tf.Session() as sess:
     n_leftover = int(np.ceil(n_orig / batch_size) * batch_size - n_orig)
     if n_leftover != 0:
         _dt_tmp = np.append(np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784)),
-                            np.zeros((batch_size - n_orig, 784)), axis=0)
-        _lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * (batch_size - n_orig), axis=0)
+                            np.zeros((n_leftover, 784)), axis=0)
+        _lb_tmp = np.append(y_train[data_shift:n_orig + data_shift], [[0., 1.]] * n_leftover, axis=0)
     else:
         _dt_tmp = np.reshape(x_train[data_shift:n_orig + data_shift], newshape=(-1, 784))
         _lb_tmp = y_train[data_shift:n_orig + data_shift]
@@ -102,7 +102,7 @@ with tf.Session() as sess:
     n_runs = int(np.ceil(n_orig / batch_size))
     val = np.empty((0, 1))
     for k in range(n_runs):
-        _, val_new = sess.run(d_x, feed_dict={
+        val_new = sess.run(d_x, feed_dict={
             x_placeholder: np.reshape(_dt_tmp[batch_size * k:batch_size * (k + 1)],
                                       newshape=[batch_size, im_dim, im_dim, channel]),
             y_placeholder: _lb_tmp[batch_size * k:batch_size * (k + 1)]})
@@ -167,7 +167,7 @@ with tf.Session() as sess:
                     validation_success = stat_vals[k, 0] > validation_crit_val or skip_validation
                     if validation_success:
                         train_data.append(np.reshape(x_batch[k], newshape=784))
-                        train_labels.append(1. if y_batch[k, 0] == 1. else -1.)
+                        train_labels.append(0 if y_batch[k, 0] == 1. else 1)
 
                     if validation_success and was_generated:
                         false_neg[trial] += 1
@@ -175,8 +175,9 @@ with tf.Session() as sess:
         # validation for SD, Cramer and RONI
         val_cramer = cl.cramer_test(train_data_tmp, train_labels_tmp, np.reshape(x_train[:1000], (-1, 784)), y_train[:1000])
         val_sd = cl.sd_val_success(train_data_tmp, train_labels_tmp)
-        val_roni = cl.roni_val_svm(train_data_tmp, train_labels_tmp, train_data[:100], train_labels[:100],
-                                    train_data_tmp[:n_orig], train_labels_tmp[:n_orig])
+        val_roni = cl.roni_val_svm(np.reshape(train_data_tmp, newshape=[-1, 784]), np.argmax(train_labels_tmp, axis=1),
+                                   train_data[:100], train_labels[:100],
+                                    np.reshape(train_data_tmp[:n_orig], newshape=[-1, 784]), np.argmax(train_labels_tmp[:n_orig], axis=1))
         train_data_cramer = []
         train_labels_cramer = []
         train_data_sd = []
@@ -186,7 +187,7 @@ with tf.Session() as sess:
         for i in range(n_t):
             if val_cramer[i]:
                 train_data_cramer.append(train_data_tmp[i])
-                train_labels_cramer.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                train_labels_cramer.append(0 if train_labels_tmp[i, 0] == 1. else 1.)
                 if i > n_orig:
                     false_neg_cramer[trial] += 1
             elif i < n_orig:
@@ -194,7 +195,7 @@ with tf.Session() as sess:
 
             if val_sd[i]:
                 train_data_sd.append(train_data_tmp[i])
-                train_labels_sd.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                train_labels_sd.append(0 if train_labels_tmp[i, 0] == 1. else 1)
                 if i > n_orig:
                     false_neg_sd[trial] += 1
             elif i < n_orig:
@@ -202,7 +203,7 @@ with tf.Session() as sess:
 
             if val_roni[i]:
                 train_data_roni.append(train_data_tmp[i])
-                train_labels_roni.append(1. if train_labels_tmp[i, 0] == 1. else -1.)
+                train_labels_roni.append(0 if train_labels_tmp[i, 0] == 1. else 1)
                 if i > n_orig:
                     false_neg_roni[trial] += 1
             elif i < n_orig:
@@ -249,8 +250,8 @@ print('RONI:')
 print('RONI error=', np.mean(errs_roni) * 100, '+-', (np.std(errs_roni) * 1.96 / np.sqrt(n_trials)) * 100)
 
 if not skip_validation:
-    print('SD false negative=', (np.mean(false_neg_roni) / (n_t * gen_share)) * 100,
+    print('RONI false negative=', (np.mean(false_neg_roni) / (n_t * gen_share)) * 100,
                   '+-', (np.std(false_neg_roni) * 100 / (n_t * gen_share)) * 1.96 / np.sqrt(n_trials))
-    print('SD false positive=', (np.mean(false_pos_roni) / n_orig) * 100,
+    print('RONI false positive=', (np.mean(false_pos_roni) / n_orig) * 100,
                   '+-', (np.std(false_pos_roni) * 100 / n_orig) * 1.96 / np.sqrt(n_trials))
 

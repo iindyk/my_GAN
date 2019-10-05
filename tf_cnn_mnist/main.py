@@ -9,8 +9,8 @@ from tf_cnn_mnist.utils import pp, visualize, to_json, show_all_variables
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
-flags.DEFINE_integer("g_pretrain", 200, "Number of iterations performed without adversarial objective [1000]")
+flags.DEFINE_integer("epoch", 100, "Epoch to train [25]")
+flags.DEFINE_integer("g_pretrain", 100, "Number of iterations performed without adversarial objective [1000]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
@@ -82,15 +82,16 @@ def main(_):
                 raise Exception("[!] Train a model first, then run test mode")
 
         # Below is codes for visualization
-        OPTION = 7
-        visualize(sess, dcgan, FLAGS, OPTION)
+        if not FLAGS.train:
+            OPTION = 7
+            visualize(sess, dcgan, FLAGS, OPTION)
 
 
 if __name__ == '__main__':
     # setting max heap size limit
     rsrc = resource.RLIMIT_DATA
     _, hard = resource.getrlimit(rsrc)
-    resource.setrlimit(rsrc, ((1024 ** 3) * 10, hard))
+    resource.setrlimit(rsrc, ((1024 ** 3) * 11, hard))
     soft, hard = resource.getrlimit(rsrc)
     print('Soft RAM limit set to:', soft / (1024 ** 3), 'GB')
     tf.app.run()

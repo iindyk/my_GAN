@@ -316,7 +316,7 @@ def visualize(sess, dcgan, config, option):
 
     elif option == 7:
         n_trials = 10
-        n_t = 800
+        n_t = 900
         sample_from_orig = False  # sample generated data from original
         data_shift = 1500
         validation_crit_val = 0. #-.8
@@ -404,8 +404,10 @@ def visualize(sess, dcgan, config, option):
 
             train_data_tmp = np.append(dcgan.data_X[data_shift:int(n_t * (1 - gen_share)) + data_shift],
                                         additional_x_train[:int(n_t * gen_share)], axis=0)
+            #train_labels_tmp = np.append(dcgan.data_y[data_shift:int(n_t * (1 - gen_share)) + data_shift],
+            #                             additional_y_train[:int(n_t * gen_share)], axis=0)
             train_labels_tmp = np.append(dcgan.data_y[data_shift:int(n_t * (1 - gen_share)) + data_shift],
-                                         additional_y_train[:int(n_t * gen_share)], axis=0)
+                                         [([1., 0., 0.] if random.randint(0, 2) == 1 else [0., 1., 0.]) for i in range(int(n_t*gen_share))], axis=0)
 
             train_data = []
             train_labels = []

@@ -237,8 +237,8 @@ def roni_val_svm(images, labels, valid_set, valid_labels, train_set, train_label
     new_train_labels = np.array(train_labels)
     valid_success = []
     for new_image, new_label in zip(images, labels):
-        _new_train_set = np.append(new_train_set, np.reshape(new_image, newshape=[1, 28, 28, 1]), axis=0)
-        _new_train_labels = np.append(new_train_labels, np.reshape(new_label, newshape=[1, 3]), axis=0)
+        _new_train_set = np.append(new_train_set, np.reshape(new_image, newshape=[1, 784]), axis=0)
+        _new_train_labels = np.append(new_train_labels, np.reshape(new_label, newshape=[1]), axis=0)
         svc.fit(_new_train_set, _new_train_labels)
         new_err = 1 - svc.score(valid_set, valid_labels)
         valid_success.append(new_err <= err)
