@@ -39,7 +39,7 @@ def c(images):
 
 
 def sd_val_success(images, labels):
-    kappa = 0.98
+    kappa = 0.75
     p = 50
     _images = np.reshape(images, newshape=(-1, 784))
     n = len(images)
@@ -133,7 +133,7 @@ valid_9_ind = []
 
 
 def cramer_test(images, labels, valid_set, valid_indices):
-    crit_val = 30.5
+    crit_val = 16#30.5
     global part_stat_7, part_stat_8, part_stat_9, valid_7_ind, valid_8_ind, valid_9_ind
     if part_stat_7 == 0:
         for i in range(len(valid_indices)):

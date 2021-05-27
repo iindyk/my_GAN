@@ -18,7 +18,7 @@ data_shift = 0
 validation_crit_val = 3.69
 skip_validation = True
 labels_to_use = [5, 6]
-model_to_load = '01-17_15:41_0.75'
+model_to_load = '01-17_15_41_0.75'
 model_path = '/home/iindyk/PycharmProjects/my_GAN/saved_models_my_GAN/' + model_to_load + '/model.ckpt'
 
 
